@@ -17,6 +17,7 @@ import { Post, PostSchema } from "../posts/posts.model";
 import { MarketsService } from "./markets.service";
 import { MarketsController } from "./markets.controller";
 import { PostsModule } from "../posts/posts.module";
+import { XLayerVerificationService } from "../chain/xlayer-verification.service";
 
 @Module({
   imports: [
@@ -32,7 +33,7 @@ import { PostsModule } from "../posts/posts.module";
     forwardRef(() => PostsModule),
   ],
   controllers: [MarketsController],
-  providers: [MarketsService],
+  providers: [MarketsService, XLayerVerificationService],
   exports: [MarketsService],
 })
 export class MarketsModule {}

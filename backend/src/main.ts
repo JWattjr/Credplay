@@ -31,7 +31,7 @@ async function bootstrap() {
 
   const port = Number(process.env.PORT || 5000);
   await app.listen(port);
-  console.log(`Verity NestJS Backend is running on: http://localhost:${port}/api`);
+  console.log(`CredPlay backend is running on: http://localhost:${port}/api`);
 }
 bootstrap();
 

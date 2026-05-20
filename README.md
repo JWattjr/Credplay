@@ -1,8 +1,8 @@
-# Verity
+# CredPlay
 
-Verity is a social prediction and opinion market platform. It is structured as a **pnpm monorepo** consisting of a modern Next.js frontend and a modular, highly scalable NestJS backend.
+CredPlay is a World Cup social prediction and opinion market platform. It is structured as a **pnpm monorepo** consisting of a modern Next.js frontend and a modular NestJS backend.
 
-Users can share normal social posts, create opinion/prediction market posts with YES/NO resolution criteria, cast free sentiment votes, or purchase USDC-backed YES/NO positions using the Arc Testnet.
+Users can share normal social posts, create football prediction market posts with YES/NO resolution criteria, cast free sentiment votes, and anchor prediction creation plus seed liquidity on X Layer with USDT.
 
 ---
 
@@ -11,10 +11,10 @@ Users can share normal social posts, create opinion/prediction market posts with
 ### Monorepo Structure
 
 - **Package Manager:** `pnpm` with Workspaces
-- **Frontend:** Next.js (App Router), React 19, Tailwind CSS, Radix UI, Lucide Icons
-- **Web3 Integration:** RainbowKit, Wagmi, Viem (Arc Testnet USDC transfers & reads)
-- **Backend:** NestJS 11 (Modular architectural patterns, Dependency Injection)
-- **Database:** MongoDB via Mongoose (ODM), MongoDB Indexing
+- **Frontend:** Next.js App Router, React 19, Tailwind CSS, Lucide Icons
+- **Web3 Integration:** RainbowKit, Wagmi, Viem, X Layer USDT contract calls and reads
+- **Backend:** NestJS 11, Dependency Injection, modular domain services
+- **Database:** MongoDB via Mongoose
 - **Validation & Security:** `class-validator`, `class-transformer`, JWT authentication
 
 ---
@@ -22,32 +22,23 @@ Users can share normal social posts, create opinion/prediction market posts with
 ## Project Structure
 
 ```text
-Verity/
-├── frontend/                  # Next.js Application
+CredPlay/
+├── contracts/                 # X Layer prediction contract and ABI
+├── frontend/                  # Next.js application
 │   ├── src/
-│   │   ├── api/              # API Clients & Service Layer
-│   │   ├── app/              # Next.js App Router Pages
-│   │   ├── components/       # UI & Domain Components
-│   │   ├── hooks/            # Custom React Hooks
-│   │   └── lib/              # Shared Helper Utilities
-│   └── package.json
-│
-├── backend/                   # NestJS Application
+│   │   ├── api/               # API clients
+│   │   ├── app/               # Next.js App Router pages
+│   │   ├── components/        # UI and domain components
+│   │   ├── hooks/             # React hooks
+│   │   └── lib/               # Shared helpers
+├── backend/                   # NestJS application
 │   ├── src/
-│   │   ├── common/           # HTTP Filters, Guards, Response Interceptors
-│   │   ├── modules/          # Modular NestJS Domain Modules
-│   │   │   ├── auth/         # JWT and Account Authentication
-│   │   │   ├── comments/     # Posts Comments
-│   │   │   ├── interactions/ # Likes & Reshares
-│   │   │   ├── markets/      # Predictions, Trades, Votes, Positions
-│   │   │   ├── posts/        # Feed Posts
-│   │   │   └── users/        # Wallet Profiles & Meta
-│   │   ├── main.ts           # NestJS Server Entry Point
-│   │   └── seed.ts           # MongoDB Seeding & Mock Database Generator
-│   └── package.json
-│
-├── package.json               # Monorepo Workspace Scripts
-├── pnpm-workspace.yaml        # Monorepo Packages Declaration
+│   │   ├── common/            # Filters, guards, interceptors
+│   │   ├── modules/           # Auth, users, posts, markets, comments
+│   │   ├── main.ts
+│   │   └── seed.ts
+├── package.json
+├── pnpm-workspace.yaml
 └── pnpm-lock.yaml
 ```
 
@@ -57,96 +48,81 @@ Verity/
 
 ### 1. Prerequisites
 
-Ensure you have Node.js (v18+) and `pnpm` installed on your machine. You will also need a running local instance of MongoDB (default: `mongodb://127.0.0.1:27017/verity`).
+Install Node.js and `pnpm`. You will also need MongoDB running locally or a hosted MongoDB connection string.
 
-### 2. Install Monorepo Dependencies
-
-From the root of the workspace, run:
+### 2. Install Dependencies
 
 ```bash
 pnpm install:all
 ```
 
-### 3. Setup Environment Variables
+### 3. Environment Variables
 
-#### Frontend Environment
-
-Create a `frontend/.env.local` file from the example:
+Create `frontend/.env.local` from:
 
 ```bash
 cp frontend/.env.example frontend/.env.local
 ```
 
-Add the necessary variables (e.g. WalletConnect Project ID):
-
-- `NEXT_PUBLIC_API_URL` (default: `http://localhost:5050/api`)
-- `NEXT_PUBLIC_APP_URL` (default: `http://localhost:3000`)
-- `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
-
-#### Backend Environment
-
-Create a `backend/.env` file from the example:
+Create `backend/.env` from:
 
 ```bash
 cp backend/.env.example backend/.env
 ```
 
-Ensure database connection strings and JWT credentials are set:
+Important X Layer variables:
 
-- `MONGODB_URI` (default: `mongodb://127.0.0.1:27017/verity`)
-- `PORT` (default: `5050`)
-- `JWT_SECRET` (generate a secure secret)
+```env
+X_LAYER_RPC_URL=
+X_LAYER_CHAIN_ID=
+X_LAYER_USDT_ADDRESS=
+X_LAYER_MARKET_CONTRACT_ADDRESS=
+X_LAYER_MARKET_CREATION_FEE_USDT=2
+X_LAYER_USDT_DECIMALS=6
+
+NEXT_PUBLIC_X_LAYER_RPC_URL=
+NEXT_PUBLIC_XLAYER_CHAIN_ID=
+NEXT_PUBLIC_XLAYER_USDT_ADDRESS=
+NEXT_PUBLIC_CREDPLAY_MARKET_CONTRACT_ADDRESS=
+```
+
+Never commit private keys or local `.env` files.
 
 ---
 
 ## Development Workflow
 
-You can start both applications concurrently from the root directory:
-
-### Run Development Servers
-
-- **Concurrently (Frontend & Backend):**
-  Use two separate terminal tabs to run:
-  ```bash
-  pnpm dev:frontend
-  pnpm dev:backend
-  ```
-
-### Seed Mock Data
-
-To populate your local MongoDB with a clean, fully-functioning dataset (users, posts, active prediction markets, mock votes, and comments):
+Run the apps in separate terminals:
 
 ```bash
-pnpm --filter verity-backend seed
+pnpm dev:frontend
+pnpm dev:backend
+```
+
+Seed local sports mock data:
+
+```bash
+pnpm --filter credplay-backend seed
 ```
 
 ---
 
 ## Core Product Rules & Features
 
-### 1. Social Feed
-
-- **Normal Posts:** Supports standard micro-blogging features including liking, replying, and resharing.
-- **Wallet Profiles:** Users are identified securely via their Web3 wallet addresses. Profiles can be edited to include custom names, bios, and avatars.
-
-### 2. Prediction & Signal Markets
-
-- **Creation:** Prediction posts ask a specific Yes/No question and specify a resolution source, YES/NO criteria, a category, and a deadline.
-- **AI Quality Review:** The **Verity AI Agent** automatically grades the quality of a prediction question (e.g., verifying it is highly measurable and objective) before allowing creation.
-- **Free Voting:** Users can cast daily free sentiment votes (YES/NO) to help qualify markets for review.
-- **USDC Trading:** Users can purchase positions on outcome tokens (YES or NO shares) using Arc Testnet USDC.
-- **My Wallet Dashboard:** Shows transaction histories, daily vote usage (capped per day), and active prediction positions.
+- **World Cup Feed:** Normal sports posts plus prediction market cards.
+- **Prediction Creation:** Prediction posts ask a measurable YES/NO football question with a deadline and resolution source.
+- **Market Review:** CredPlay checks that each prediction has clear sports resolution criteria before paid creation.
+- **Free Calls:** Users cast daily YES/NO sentiment calls to help markets qualify.
+- **X Layer Creation:** Prediction creation is anchored by a verified X Layer contract event.
+- **USDT Seed Liquidity:** Users approve USDT and call the X Layer market contract to seed YES/NO liquidity; the backend verifies the emitted event before updating the market.
+- **Credibility:** Profiles show reputation, free-call history, and sports prediction signal.
 
 ---
 
-## Verification & Build Checks
-
-Before committing or submitting a pull request, run the following verification checks from the monorepo root:
+## Verification
 
 ```bash
-# Build the Next.js Frontend
 pnpm build:frontend
-
-# Build the NestJS Backend
 pnpm build:backend
+pnpm --filter credplay-backend test
 ```

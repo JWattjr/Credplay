@@ -1,0 +1,92 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [
+      { "name": "feeToken_", "type": "address" },
+      { "name": "treasury_", "type": "address" },
+      { "name": "creationFee_", "type": "uint256" }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "createPrediction",
+    "inputs": [{ "name": "marketKey", "type": "bytes32" }],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "seedPrediction",
+    "inputs": [
+      { "name": "marketKey", "type": "bytes32" },
+      { "name": "amount", "type": "uint256" },
+      { "name": "yesSide", "type": "bool" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "votePrediction",
+    "inputs": [
+      { "name": "marketKey", "type": "bytes32" },
+      { "name": "side", "type": "uint8" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "feeToken",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "address" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "creationFee",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "uint256" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "treasury",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "address" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "PredictionCreated",
+    "inputs": [
+      { "name": "marketKey", "type": "bytes32", "indexed": true },
+      { "name": "creator", "type": "address", "indexed": true },
+      { "name": "feeAmount", "type": "uint256", "indexed": false },
+      { "name": "feeToken", "type": "address", "indexed": false }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "PredictionSeeded",
+    "inputs": [
+      { "name": "marketKey", "type": "bytes32", "indexed": true },
+      { "name": "seeder", "type": "address", "indexed": true },
+      { "name": "amount", "type": "uint256", "indexed": false },
+      { "name": "yesSide", "type": "bool", "indexed": false }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "PredictionVoted",
+    "inputs": [
+      { "name": "marketKey", "type": "bytes32", "indexed": true },
+      { "name": "voter", "type": "address", "indexed": true },
+      { "name": "side", "type": "uint8", "indexed": false }
+    ],
+    "anonymous": false
+  }
+]

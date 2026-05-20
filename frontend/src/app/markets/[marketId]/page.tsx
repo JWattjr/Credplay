@@ -10,7 +10,7 @@ export default async function MarketDetailPage({
 
   return (
     <PagePanel
-      description="Review the full conditions, fees, and liquidity before backing a side with Arc testnet USDC."
+      description="Review the full conditions, fees, and liquidity before backing a side with X Layer USDT."
       eyebrow="Opinion Market"
       title="Market Details"
     >

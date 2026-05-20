@@ -81,6 +81,23 @@ export function approveMarketForTrading(marketId: string) {
   });
 }
 
+export function seedMarketLiquidity({
+  marketId,
+  profileId,
+  side,
+  txHash,
+}: {
+  marketId: string;
+  profileId: string;
+  side: VoteSide;
+  txHash: string;
+}) {
+  return apiRequest<MarketPost>(`/markets/${marketId}/seed`, {
+    method: "POST",
+    body: JSON.stringify({ profileId, side, txHash }),
+  });
+}
+
 export async function executeMarketTrade({
   market,
   profileId,

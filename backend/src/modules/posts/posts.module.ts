@@ -9,6 +9,7 @@ import { PostsService } from "./posts.service";
 import { PostsController } from "./posts.controller";
 import { CommentsModule } from "../comments/comments.module";
 import { InteractionsModule } from "../interactions/interactions.module";
+import { XLayerVerificationService } from "../chain/xlayer-verification.service";
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { InteractionsModule } from "../interactions/interactions.module";
     InteractionsModule,
   ],
   controllers: [PostsController],
-  providers: [PostsService],
+  providers: [PostsService, XLayerVerificationService],
   exports: [PostsService],
 })
 export class PostsModule {}

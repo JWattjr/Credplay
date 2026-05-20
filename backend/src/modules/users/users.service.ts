@@ -27,7 +27,7 @@ export class UsersService {
           username: DEV_USERNAME,
           displayName: DEV_USERNAME,
           walletAddress: "dev-judesignal",
-          bio: "Development user for local Verity testing.",
+          bio: "Development user for local CredPlay sports testing.",
         },
       },
       { upsert: true, new: true, runValidators: true },

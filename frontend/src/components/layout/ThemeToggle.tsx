@@ -6,12 +6,12 @@ import { useEffect, useState } from "react";
 type Theme = "light" | "dark";
 
 function getPreferredTheme(): Theme {
-  return "light";
+  return "dark";
 }
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
-  window.localStorage.setItem("verity-theme", theme);
+  window.localStorage.setItem("credplay-theme", theme);
 }
 
 export default function ThemeToggle() {
@@ -27,7 +27,7 @@ export default function ThemeToggle() {
     <button
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       aria-pressed={isDark}
-      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] transition-colors hover:bg-[var(--surface-hover)]"
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] border border-white/10 bg-[#15161a] text-white transition-colors hover:border-brand-secondary/60 hover:bg-brand-secondary/10"
       onClick={() => {
         const nextTheme = isDark ? "light" : "dark";
         setTheme(nextTheme);

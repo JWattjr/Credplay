@@ -1,7 +1,16 @@
 "use client";
 
-import type { MouseEvent } from "react";
-import { ArrowDown, ArrowUp, MessageCircle, Repeat2, Share, Droplets } from "lucide-react";
+import type { MouseEvent, ReactNode } from "react";
+import {
+  ArrowRight,
+  BarChart3,
+  MessageCircle,
+  Repeat2,
+  Share,
+  ShieldCheck,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 import { PREDICTION_CREATION_FEE_USDT } from "@/lib/fees";
 import type { VoteSide } from "@/lib/credplay";
 
@@ -44,17 +53,16 @@ export interface MarketCardProps {
   avatarColor?: string;
 }
 
-/** Map CredPlay lifecycle statuses to display labels */
 function displayStatus(status: string) {
   const labels: Record<string, string> = {
     draft: "Draft",
-    collecting_calls: "Collecting Calls",
-    open_for_votes: "Collecting Calls",
+    collecting_calls: "Collecting calls",
+    open_for_votes: "Trending",
     seeding: "Seeding",
-    qualified: "Under Review",
-    under_review: "Under Review",
-    tradable: "Live",
-    live: "Live",
+    qualified: "High conviction",
+    under_review: "High conviction",
+    tradable: "Live market",
+    live: "Live market",
     locked: "Locked",
     closed: "Closed",
     resolving: "Resolving",
@@ -85,6 +93,7 @@ export default function MarketCard({
   freeYesVotes = 0,
   freeNoVotes = 0,
   totalFreeVotes,
+  uniqueVotersCount = 0,
   qualificationThreshold = 20,
   dailyVotesRemaining = 10,
   votingDisabledMessage,
@@ -114,22 +123,21 @@ export default function MarketCard({
   const voteThresholdMet = totalVotes >= qualificationThreshold;
   const votesToReview = Math.max(0, qualificationThreshold - totalVotes);
   const qualificationProgress = Math.min(100, (totalVotes / qualificationThreshold) * 100);
-
-  // Mock seed liquidity progress (TODO: wire to real data)
-  const seedLiquidity = 0;
+  const seedLiquidity = totalUsdt;
   const requiredSeedLiquidity = 50;
   const seedProgress = Math.min(100, (seedLiquidity / requiredSeedLiquidity) * 100);
-
   const isDetail = variant === "detail";
   const creatorLabel = handle === "@unknown" ? name : handle;
-  const openDetails = () => {
-    if (!isDetail) onOpenDetails?.();
-  };
+  const traderCount = Math.max(uniqueVotersCount, totalVotes, 1);
   const stopClick = (event: MouseEvent) => event.stopPropagation();
+
+  function openDetails() {
+    if (!isDetail) onOpenDetails?.();
+  }
 
   return (
     <article
-      className={`rounded-[10px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm transition-colors hover:bg-[var(--surface-solid)] ${
+      className={`group overflow-hidden rounded-[8px] border border-white/10 bg-[linear-gradient(155deg,rgba(24,25,29,0.98),rgba(8,8,9,0.98)_58%,rgba(0,224,88,0.08))] p-4 shadow-[0_20px_80px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors hover:border-brand-secondary/45 ${
         isDetail ? "" : "cursor-pointer"
       }`}
       onClick={openDetails}
@@ -142,219 +150,176 @@ export default function MarketCard({
       role={isDetail ? undefined : "link"}
       tabIndex={isDetail ? undefined : 0}
     >
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="text-[17px] font-bold leading-snug text-[var(--foreground)] sm:text-lg">{question}</h3>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-[var(--muted)]">
-            <span>by</span>
-            <span className="font-mono text-[var(--foreground)]">{creatorLabel}</span>
-            <span className="font-mono text-[var(--muted)]">{"\u00B7"}</span>
-            <span className="font-mono">{time}</span>
-          </div>
-        </div>
-
-        <span className={`shrink-0 pt-0.5 rounded-[4px] px-2 py-0.5 font-mono text-[11px] font-bold ${
-          isClosed ? "bg-[var(--surface-muted)] text-[var(--muted)]" 
-          : isLive ? "bg-brand-secondary/20 text-brand-secondary"
-          : "bg-brand-accent/20 text-brand-accent"
-        }`}>
+      <div className="mb-3 flex items-center justify-between gap-3 font-mono text-[11px]">
+        <span className="flex items-center gap-1.5 font-black uppercase tracking-[0.12em] text-brand-secondary">
+          {isLive ? <BarChart3 className="h-3.5 w-3.5" /> : <TrendingUp className="h-3.5 w-3.5" />}
           {displayStatus(status)}
         </span>
+        <span className="text-[var(--muted)]">{traderCount.toLocaleString()} fans</span>
+      </div>
+
+      <div className="mb-4">
+        <h3 className="text-[22px] font-black leading-[1.05] tracking-normal text-white sm:text-2xl">
+          {question}
+        </h3>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[var(--muted)]">
+          <span>{category}</span>
+          <span>{"\u00B7"}</span>
+          <span>{time}</span>
+          <span>{"\u00B7"}</span>
+          <span>closes {deadline}</span>
+        </div>
       </div>
 
       {postContent && postContent !== question && (
-        <p className="mb-3 line-clamp-2 whitespace-pre-wrap text-sm leading-relaxed text-[var(--muted)]">
-          {postContent}
-        </p>
+        <p className="mb-4 line-clamp-2 text-sm leading-relaxed text-[var(--muted)]">{postContent}</p>
       )}
 
-      <div className="mb-2 flex flex-wrap gap-2">
-        <span className="rounded-[3px] border border-[var(--border)] bg-[var(--surface-solid)] px-2 py-0.5 font-mono text-[11px] text-[var(--muted)]">
-          {category}
-        </span>
-      </div>
-
-      {/* Free Call Sentiment */}
-      <div className="mb-3 rounded-[7px] bg-[var(--surface-muted)] p-3">
-        <div className="mb-3 font-mono text-[11px] font-bold uppercase text-[var(--foreground)]">
-          Free Call Sentiment
+      <div className="mb-2 flex items-end justify-between">
+        <div>
+          <span className="text-[32px] font-black leading-none text-brand-secondary">
+            {displayYesPercent.toFixed(0)}%
+          </span>
+          <span className="ml-2 font-mono text-sm font-black text-brand-secondary">Yes</span>
         </div>
-        <div className="flex h-1.5 overflow-hidden rounded-full bg-zinc-700">
-          <div className="h-full bg-upvote transition-all" style={{ width: `${displayYesPercent}%` }} />
-          <div className="h-full bg-downvote transition-all" style={{ width: `${noPercent}%` }} />
-        </div>
-        <div className="mt-2 flex justify-between font-mono text-[11px] text-[var(--muted)]">
-          {totalVotes > 0 ? (
-            <>
-              <span>Yes: {displayYesPercent.toFixed(0)}%</span>
-              <span>No: {noPercent.toFixed(0)}%</span>
-            </>
-          ) : (
-            <span>No free calls yet</span>
-          )}
+        <div>
+          <span className="text-[32px] font-black leading-none text-white/90">{noPercent.toFixed(0)}%</span>
+          <span className="ml-2 font-mono text-sm font-black text-[var(--muted)]">No</span>
         </div>
       </div>
 
-      {/* Free Calls Progress */}
-      <div className="mb-3 rounded-[7px] border border-dashed border-[var(--border)] bg-[var(--surface-muted)] p-3 font-mono text-[11px] text-[var(--muted)]">
-        <div className="mb-2 flex flex-wrap justify-between gap-2">
-          <span>{totalVotes} free calls</span>
-          <span>{voteThresholdMet ? "Review threshold met ✓" : `${votesToReview} more to review`}</span>
-        </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-solid)]">
-          <div className="h-full bg-brand-secondary transition-all" style={{ width: `${qualificationProgress}%` }} />
-        </div>
-        <div className="mt-2">
-          <span>Free calls left today: {dailyVotesRemaining}</span>
-        </div>
+      <div className="mb-4 flex h-2 overflow-hidden rounded-full bg-white/10">
+        <div className="h-full bg-brand-secondary" style={{ width: `${displayYesPercent}%` }} />
+        <div className="h-full bg-downvote" style={{ width: `${noPercent}%` }} />
       </div>
 
-      {/* Seed Liquidity Progress */}
-      {!isLive && !isClosed && (
-        <div className="mb-3 rounded-[7px] border border-dashed border-brand-accent/30 bg-brand-accent/5 p-3 font-mono text-[11px] text-[var(--muted)]">
-          <div className="mb-2 flex flex-wrap justify-between gap-2">
-            <span className="flex items-center gap-1">
-              <Droplets className="h-3 w-3 text-brand-accent" />
-              Seed Liquidity
-            </span>
-            <span>{seedLiquidity} / {requiredSeedLiquidity} USDT</span>
-          </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-solid)]">
-            <div className="h-full bg-brand-accent transition-all" style={{ width: `${seedProgress}%` }} />
-          </div>
-          <p className="mt-2 text-[10px] text-[var(--muted)]">Seed this prediction to help it become a live market.</p>
-        </div>
-      )}
+      <div className="mb-4 grid grid-cols-[1fr_1fr_auto] items-center gap-3 border-b border-white/10 pb-4 font-mono text-[11px] text-[var(--muted)]">
+        <span>Calls {totalVotes.toLocaleString()}</span>
+        <span>Liquidity {totalUsdt.toLocaleString(undefined, { maximumFractionDigits: 2 })} USDT</span>
+        <button
+          className="flex h-9 items-center gap-2 rounded-[6px] border border-brand-secondary/30 bg-black/30 px-4 font-black text-brand-secondary transition-colors hover:bg-brand-secondary hover:text-black"
+          onClick={openDetails}
+          type="button"
+        >
+          Trade <ArrowRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
 
-      {isLive ? (
-        <div className="mb-3 grid grid-cols-2 gap-2" onClick={stopClick}>
-          <button className="h-9 rounded-[6px] border border-brand-secondary bg-brand-secondary/10 text-sm font-bold text-[var(--foreground)]" type="button">
-            Back YES with USDT
-          </button>
-          <button className="h-9 rounded-[6px] border border-downvote bg-downvote/10 text-sm font-bold text-[var(--foreground)]" type="button">
-            Back NO with USDT
-          </button>
+      <div className="mb-4 grid gap-3 rounded-[8px] border border-white/10 bg-black/20 p-3">
+        <div className="flex items-center justify-between gap-3 font-mono text-[11px] text-[var(--muted)]">
+          <span>{voteThresholdMet ? "Review threshold met" : `${votesToReview} more calls to review`}</span>
+          <span>{qualificationProgress.toFixed(0)}%</span>
         </div>
-      ) : canFreeVote ? (
-        <div className="mb-3" onClick={stopClick}>
-          {isUnderReview && (
-            <p className="mb-3 rounded-[7px] border border-brand-secondary/30 bg-brand-secondary/10 p-3 text-sm font-semibold text-[var(--foreground)]">
-              Ready for Live Market review ✓
-            </p>
-          )}
-          <div className="mb-2 grid grid-cols-3 gap-2">
-            <button
-              className="flex h-8 items-center justify-center gap-1 rounded-[5px] border border-brand-secondary bg-brand-secondary/10 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-brand-secondary/20 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={voteDisabled}
-              onClick={() => onVote?.("YES")}
-              title={yesCondition}
-              type="button"
-            >
-              Yes Call
-            </button>
-            <button
-              className="flex h-8 items-center justify-center gap-1 rounded-[5px] border border-downvote bg-downvote/10 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-downvote/20 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={voteDisabled}
-              onClick={() => onVote?.("NO")}
-              title={noCondition}
-              type="button"
-            >
-              No Call
-            </button>
-            <button
-              className="flex h-8 items-center justify-center gap-1 rounded-[5px] border border-brand-accent bg-brand-accent/10 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-brand-accent/20"
-              onClick={() => {/* TODO: seedPrediction() */}}
-              type="button"
-            >
-              <Droplets className="h-3.5 w-3.5" />
-              Seed
-            </button>
-          </div>
-          <p className="font-mono text-[10px] text-[var(--muted)]">Free calls earn Cred Points, not money.</p>
-          {votingDisabledMessage && <p className="mt-1 font-mono text-[11px] text-downvote">{votingDisabledMessage}</p>}
+        <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+          <div className="h-full bg-brand-secondary" style={{ width: `${qualificationProgress}%` }} />
         </div>
-      ) : (
-        <p className="mb-3 rounded-[7px] border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-sm font-semibold text-[var(--muted)]">
-          This prediction is not open for free calls.
-        </p>
-      )}
-
-      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] text-[var(--muted)]">
-        {isLive && <span>Liquidity ${totalUsdt.toLocaleString(undefined, { maximumFractionDigits: 2 })} USDT</span>}
-        <span>Closes {deadline}</span>
-        {isDetail && <span>Create fee {Number(marketCreationFeeUsdc).toFixed(2)} USDT</span>}
-        {isDetail && resolutionSource && <span className="min-w-0 truncate">Source: {resolutionSource}</span>}
+        {!isLive && !isClosed && (
+          <>
+            <div className="flex items-center justify-between gap-3 font-mono text-[11px] text-[var(--muted)]">
+              <span>Seed liquidity</span>
+              <span>{seedLiquidity.toFixed(0)} / {requiredSeedLiquidity} USDT</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+              <div className="h-full bg-brand-accent" style={{ width: `${seedProgress}%` }} />
+            </div>
+          </>
+        )}
       </div>
 
       {isDetail && (
-        <div className="mb-3 grid gap-2 rounded-[7px] border border-dashed border-[var(--border)] bg-[var(--surface-muted)] p-3 font-mono text-[11px] text-[var(--muted)]">
-          {yesCondition && <span className="text-brand-secondary">YES: {yesCondition}</span>}
-          {noCondition && <span className="text-downvote">NO: {noCondition}</span>}
+        <div className="mb-4 grid gap-2 rounded-[8px] border border-white/10 bg-black/20 p-3 text-sm text-[var(--muted)]">
+          {yesCondition && <p><span className="font-mono text-brand-secondary">YES</span> {yesCondition}</p>}
+          {noCondition && <p><span className="font-mono text-downvote">NO</span> {noCondition}</p>}
+          {resolutionSource && <p className="font-mono text-xs">Source: {resolutionSource}</p>}
+          <p className="font-mono text-xs">Create fee: {Number(marketCreationFeeUsdc).toFixed(2)} USDT</p>
         </div>
       )}
 
-      <div
-        className="flex max-w-[425px] items-center justify-between border-t border-dashed border-[var(--border)] pt-1.5 text-[var(--muted)]"
-        onClick={stopClick}
-      >
-        <button aria-label={`Comment on ${question}`} className="group flex items-center gap-2 transition-colors hover:text-[var(--foreground)]" onClick={onComment} type="button">
-          <span className="rounded-full p-2 transition-colors group-hover:bg-[var(--surface-hover)]">
-            <MessageCircle className="h-4 w-4" />
-          </span>
-          <span className="text-xs">{comments}</span>
-        </button>
+      {canFreeVote && (
+        <div className="mb-4 grid grid-cols-2 gap-2" onClick={stopClick}>
+          <button
+            className="h-9 rounded-[6px] border border-brand-secondary/35 bg-brand-secondary/10 text-sm font-black text-brand-secondary transition-colors hover:bg-brand-secondary hover:text-black disabled:cursor-not-allowed disabled:opacity-45"
+            disabled={voteDisabled}
+            onClick={() => onVote?.("YES")}
+            type="button"
+          >
+            Yes Call
+          </button>
+          <button
+            className="h-9 rounded-[6px] border border-downvote/35 bg-downvote/10 text-sm font-black text-downvote transition-colors hover:bg-downvote hover:text-black disabled:cursor-not-allowed disabled:opacity-45"
+            disabled={voteDisabled}
+            onClick={() => onVote?.("NO")}
+            type="button"
+          >
+            No Call
+          </button>
+        </div>
+      )}
 
-        <button
-          aria-label={`Reshare ${question}`}
-          aria-pressed={reshared}
-          className={`group flex items-center gap-2 transition-colors hover:text-[var(--foreground)] ${reshared ? "text-brand-secondary" : ""}`}
-          onClick={onReshare}
-          type="button"
-        >
-          <span className="rounded-full p-2 transition-colors group-hover:bg-[var(--surface-hover)]">
-            <Repeat2 className="h-4 w-4" />
-          </span>
-          <span className="text-xs">{reshares}</span>
-        </button>
+      {votingDisabledMessage && <p className="mb-3 font-mono text-[11px] text-downvote">{votingDisabledMessage}</p>}
 
-        <button
-          aria-label={`Yes Call on ${question}`}
-          aria-pressed={viewerVote === "YES"}
-          className={`group flex items-center gap-2 transition-colors hover:text-brand-secondary ${
-            viewerVote === "YES" ? "text-brand-secondary" : ""
-          }`}
-          disabled={voteDisabled}
-          onClick={() => onVote?.("YES")}
-          type="button"
-        >
-          <span className="rounded-full p-2 transition-colors group-hover:bg-brand-secondary/10">
-            <ArrowUp className="h-4 w-4" />
-          </span>
-          <span className="text-xs">{freeYesVotes}</span>
-        </button>
+      <div className="flex items-center justify-between gap-3" onClick={stopClick}>
+        <div className="flex min-w-0 items-center gap-2">
+          <AvatarStack />
+          <span className="truncate font-mono text-[11px] text-[var(--muted)]">{creatorLabel} + fans</span>
+        </div>
 
-        <button
-          aria-label={`No Call on ${question}`}
-          aria-pressed={viewerVote === "NO"}
-          className={`group flex items-center gap-2 transition-colors hover:text-downvote ${
-            viewerVote === "NO" ? "text-downvote" : ""
-          }`}
-          disabled={voteDisabled}
-          onClick={() => onVote?.("NO")}
-          type="button"
-        >
-          <span className="rounded-full p-2 transition-colors group-hover:bg-downvote/10">
-            <ArrowDown className="h-4 w-4" />
-          </span>
-          <span className="text-xs">{freeNoVotes}</span>
-        </button>
-
-        <button aria-label={`Share ${question}`} className="group flex items-center gap-2 transition-colors hover:text-[var(--foreground)]" onClick={onShare} type="button">
-          <span className="rounded-full p-2 transition-colors group-hover:bg-[var(--surface-hover)]">
-            <Share className="h-4 w-4" />
-          </span>
-        </button>
+        <div className="flex items-center gap-1 text-[var(--muted)]">
+          <IconAction label={comments} onClick={onComment} icon={<MessageCircle className="h-4 w-4" />} />
+          <IconAction active={reshared} label={reshares} onClick={onReshare} icon={<Repeat2 className="h-4 w-4" />} />
+          <IconAction onClick={onShare} icon={<Share className="h-4 w-4" />} />
+        </div>
       </div>
+
+      {hasViewerVoted && (
+        <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-brand-secondary/30 bg-brand-secondary/10 px-3 py-1 font-mono text-[11px] font-black text-brand-secondary">
+          <ShieldCheck className="h-3.5 w-3.5" />
+          Your call: {viewerVote}
+        </div>
+      )}
     </article>
+  );
+}
+
+function IconAction({
+  active = false,
+  icon,
+  label,
+  onClick,
+}: {
+  active?: boolean;
+  icon: ReactNode;
+  label?: number;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      className={`flex items-center gap-1 rounded-full p-2 transition-colors hover:bg-white/10 hover:text-white ${
+        active ? "text-brand-secondary" : ""
+      }`}
+      onClick={onClick}
+      type="button"
+    >
+      {icon}
+      {typeof label === "number" && <span className="font-mono text-[11px]">{label}</span>}
+    </button>
+  );
+}
+
+function AvatarStack() {
+  return (
+    <div className="flex -space-x-2">
+      {["bg-brand-secondary", "bg-brand-accent", "bg-brand-pitch", "bg-white"].map((color, index) => (
+        <span
+          className={`h-6 w-6 rounded-full border border-black ${color}`}
+          key={color}
+          style={{ opacity: 1 - index * 0.12 }}
+        />
+      ))}
+      <span className="flex h-6 items-center rounded-full border border-white/10 bg-white/10 px-2 font-mono text-[10px] text-white">
+        <Users className="mr-1 h-3 w-3" />
+        1.2K
+      </span>
+    </div>
   );
 }

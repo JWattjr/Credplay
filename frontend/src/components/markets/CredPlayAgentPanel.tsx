@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ClipboardCheck, CheckCircle2, AlertTriangle } from "lucide-react";
 import type { MarketPost } from "@/lib/credplay";
 import { reviewPredictionPost, type CredPlayReview } from "@/lib/credplayAgent";
 
@@ -36,9 +36,9 @@ export default function CredPlayAgentPanel({ compact = false, market, review }: 
     >
       <div className="mb-2 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Bot className="h-4 w-4 text-[var(--foreground)]" />
+          <ClipboardCheck className="h-4 w-4 text-[var(--foreground)]" />
           <h2 className="font-mono text-[11px] font-black uppercase tracking-[0.14em] text-[var(--foreground)]">
-            CredPlay AI Agent
+            CredPlay Market Review
           </h2>
         </div>
         <span className="font-mono text-xs font-black text-[var(--foreground)]">{agentReview.score}/100</span>

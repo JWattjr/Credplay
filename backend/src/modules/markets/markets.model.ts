@@ -81,6 +81,15 @@ export class Market {
   @Prop({ type: String, default: null, trim: true })
   feeCollectorAddress: string | null;
 
+  @Prop({ type: String, default: null, trim: true, index: true })
+  chainMarketKey: string | null;
+
+  @Prop({ type: String, default: null, trim: true })
+  marketContractAddress: string | null;
+
+  @Prop({ type: Number, default: null })
+  xLayerChainId: number | null;
+
   @Prop({ type: Number, default: 0 })
   usdcYesAmount: number;
 
@@ -99,6 +108,10 @@ export const MarketSchema = SchemaFactory.createForClass(Market);
 MarketSchema.index(
   { creationFeeTxHash: 1 },
   { unique: true, partialFilterExpression: { creationFeeTxHash: { $type: "string" } } },
+);
+MarketSchema.index(
+  { chainMarketKey: 1 },
+  { unique: true, partialFilterExpression: { chainMarketKey: { $type: "string" } } },
 );
 
 @Schema({ timestamps: true, versionKey: false })
@@ -210,3 +223,7 @@ export class MarketTrade {
 }
 
 export const MarketTradeSchema = SchemaFactory.createForClass(MarketTrade);
+MarketTradeSchema.index(
+  { txHash: 1 },
+  { unique: true, partialFilterExpression: { txHash: { $type: "string" } } },
+);

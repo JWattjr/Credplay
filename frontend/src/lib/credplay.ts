@@ -16,7 +16,7 @@ export type MarketStatus =
   | "live"
   | "locked"
   | "settled"
-  // Legacy Verity statuses kept for backend compat
+  // Legacy status names kept for backend compatibility.
   | "open_for_votes"
   | "qualified"
   | "tradable"
@@ -82,6 +82,12 @@ export interface MarketPost {
   creation_fee_tx_hash?: string | null;
   feeCollectorAddress?: string | null;
   fee_collector_address?: string | null;
+  chain_market_key?: string | null;
+  chainMarketKey?: string | null;
+  market_contract_address?: string | null;
+  marketContractAddress?: string | null;
+  x_layer_chain_id?: number | null;
+  xLayerChainId?: number | null;
   trading_fee_bps?: number;
   /** CredPlay: USDT seed liquidity deposited */
   seedLiquidity?: number;
@@ -169,6 +175,7 @@ export interface MarketInput {
   noCondition: string;
   creationFeeTxHash?: string;
   feeCollectorAddress?: string;
+  chainMarketKey?: string;
 }
 
 export function displayName(profile?: Profile | null) {
@@ -203,6 +210,7 @@ export const fetchMarketPositions = credplayApi.fetchMarketPositions;
 export const fetchMarketTrades = credplayApi.fetchMarketTrades;
 export const castFreeVote = credplayApi.castFreeVote;
 export const approveMarketForTrading = credplayApi.approveMarketForTrading;
+export const seedMarketLiquidity = credplayApi.seedMarketLiquidity;
 export const executeMarketTrade = credplayApi.executeMarketTrade;
 
 const MIN_MARKET_PRICE = 0.01;

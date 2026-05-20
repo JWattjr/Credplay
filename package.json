@@ -1,11 +1,11 @@
 {
-  "name": "verity-monorepo",
+  "name": "credplay-monorepo",
   "private": true,
   "scripts": {
-    "dev:frontend": "pnpm --filter verity dev",
-    "dev:backend": "pnpm --filter verity-backend dev",
-    "build:frontend": "pnpm --filter verity build",
-    "build:backend": "pnpm --filter verity-backend build",
+    "dev:frontend": "pnpm --filter credplay dev",
+    "dev:backend": "pnpm --filter credplay-backend dev",
+    "build:frontend": "pnpm --filter credplay build",
+    "build:backend": "pnpm --filter credplay-backend build",
     "install:all": "pnpm install"
   }
 }

@@ -1,7 +1,7 @@
 import { apiRequest } from "@/api/client";
 import { type Profile } from "@/lib/credplay";
 
-const TOKEN_KEY = "verity_auth_token";
+const TOKEN_KEY = "credplay_auth_token";
 
 export interface AuthResponse {
   token: string;

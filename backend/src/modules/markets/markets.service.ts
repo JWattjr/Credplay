@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, NotImplementedException, Inject, forwardRef } from "@nestjs/common";
+import { Injectable, NotFoundException, ConflictException, NotImplementedException, Inject, forwardRef, UnprocessableEntityException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types, SortOrder } from "mongoose";
 import {
@@ -18,6 +18,7 @@ import {
 import { User, UserDocument } from "../users/users.model";
 import { Post, PostDocument } from "../posts/posts.model";
 import { PostsService, MarketResponse } from "../posts/posts.service";
+import { XLayerVerificationService } from "../chain/xlayer-verification.service";
 
 export interface DailyVotesResponse {
   votesLimit: number;
@@ -71,6 +72,7 @@ export class MarketsService {
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
     @Inject(forwardRef(() => PostsService))
     private readonly postsService: PostsService,
+    private readonly xLayerVerification: XLayerVerificationService,
   ) {}
 
   private todayKey(date = new Date()): string {
@@ -307,7 +309,7 @@ export class MarketsService {
       return this.postsService.serializeMarket(market);
     }
     if (market.status !== "qualified") {
-      throw new ConflictException("Only qualified markets can be approved for USDC trading.");
+      throw new ConflictException("Only qualified markets can be approved for USDT trading.");
     }
 
     const updatedMarket = await this.marketModel.findByIdAndUpdate(
@@ -339,7 +341,69 @@ export class MarketsService {
     return trades.map((t) => this.serializeTrade(t));
   }
 
+  async seedMarketLiquidity(input: {
+    marketId: string;
+    profileId: string;
+    side: VoteSide;
+    txHash: string;
+  }): Promise<MarketResponse> {
+    const [market, user] = await Promise.all([
+      this.marketModel.findById(input.marketId),
+      this.userModel.findById(input.profileId),
+    ]);
+
+    if (!market) {
+      throw new NotFoundException("Market not found.");
+    }
+    if (!user) {
+      throw new NotFoundException("User not found.");
+    }
+    if (!user.walletAddress) {
+      throw new UnprocessableEntityException("Seed liquidity requires a wallet-backed profile.");
+    }
+    if (!market.chainMarketKey) {
+      throw new UnprocessableEntityException("This market is missing an on-chain market key.");
+    }
+    const existingSeed = await this.marketTradeModel.exists({ txHash: input.txHash.trim().toLowerCase() });
+    if (existingSeed) {
+      throw new ConflictException("This seed transaction has already been recorded.");
+    }
+
+    const verified = await this.xLayerVerification.verifyPredictionSeeded({
+      txHash: input.txHash,
+      marketKey: market.chainMarketKey,
+      seederAddress: user.walletAddress,
+      yesSide: input.side === "YES",
+    });
+
+    const amount = this.xLayerVerification.formatUnits(verified.amount);
+    const update =
+      input.side === "YES"
+        ? { $inc: { usdcYesAmount: amount, liquidity: amount } }
+        : { $inc: { usdcNoAmount: amount, liquidity: amount } };
+
+    const updatedMarket = await this.marketModel.findByIdAndUpdate(input.marketId, update, {
+      new: true,
+      runValidators: true,
+    });
+
+    await this.marketTradeModel.create({
+      marketId: new Types.ObjectId(input.marketId),
+      userId: new Types.ObjectId(input.profileId),
+      side: input.side,
+      action: "BUY",
+      shares: amount,
+      price: 1,
+      amountUsdc: amount,
+      feeUsdc: 0,
+      grossUsdc: amount,
+      txHash: input.txHash.trim().toLowerCase(),
+    });
+
+    return this.postsService.serializeMarket(updatedMarket!);
+  }
+
   async executeMarketTrade(input?: any): Promise<void> {
-    throw new NotImplementedException("USDC trading is not implemented in this phase.");
+    throw new NotImplementedException("USDT trading is not implemented in this phase.");
   }
 }

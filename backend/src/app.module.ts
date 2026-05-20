@@ -19,7 +19,7 @@ import { MarketsModule } from "./modules/markets/markets.module";
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        uri: configService.get<string>("MONGODB_URI", "mongodb://127.0.0.1:27017/verity"),
+        uri: configService.get<string>("MONGODB_URI", "mongodb://127.0.0.1:27017/credplay"),
       }),
     }),
     AuthModule,

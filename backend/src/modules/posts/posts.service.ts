@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, UnprocessableEntityException, Inject, forwardRef } from "@nestjs/common";
+import { Injectable, NotFoundException, UnprocessableEntityException, Inject, forwardRef, ConflictException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
 import { Post, PostDocument } from "./posts.model";
@@ -8,6 +8,7 @@ import { Like, LikeDocument, Reshare, ReshareDocument } from "../interactions/in
 import { Comment, CommentDocument } from "../comments/comments.model";
 import { serializeUser, UserResponse } from "../auth/auth.service";
 import { CreateMarketPostDto } from "./posts.dto";
+import { XLayerVerificationService } from "../chain/xlayer-verification.service";
 
 export interface MarketResponse {
   id: string;
@@ -39,6 +40,12 @@ export interface MarketResponse {
   creation_fee_tx_hash: string | null;
   feeCollectorAddress: string | null;
   fee_collector_address: string | null;
+  chainMarketKey: string | null;
+  chain_market_key: string | null;
+  marketContractAddress: string | null;
+  market_contract_address: string | null;
+  xLayerChainId: number | null;
+  x_layer_chain_id: number | null;
   usdcYesAmount: number;
   usdc_yes_amount: number;
   usdcNoAmount: number;
@@ -83,6 +90,7 @@ export class PostsService {
     @InjectModel(Reshare.name) private reshareModel: Model<ReshareDocument>,
     @InjectModel(Vote.name) private voteModel: Model<VoteDocument>,
     @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
+    private readonly xLayerVerification: XLayerVerificationService,
   ) {}
 
   getMarketWarning(question: string): string | null {
@@ -127,6 +135,12 @@ export class PostsService {
       creation_fee_tx_hash: market.creationFeeTxHash,
       feeCollectorAddress: market.feeCollectorAddress,
       fee_collector_address: market.feeCollectorAddress,
+      chainMarketKey: market.chainMarketKey,
+      chain_market_key: market.chainMarketKey,
+      marketContractAddress: market.marketContractAddress,
+      market_contract_address: market.marketContractAddress,
+      xLayerChainId: market.xLayerChainId,
+      x_layer_chain_id: market.xLayerChainId,
       usdcYesAmount: market.usdcYesAmount,
       usdc_yes_amount: market.usdcYesAmount,
       usdcNoAmount: market.usdcNoAmount,
@@ -256,15 +270,33 @@ export class PostsService {
   }
 
   async createMarketPost(profileId: string, input: CreateMarketPostDto): Promise<{ post: FeedPostResponse; warning: string | null }> {
-    const authorExists = await this.userModel.exists({ _id: profileId });
-    if (!authorExists) {
+    const author = await this.userModel.findById(profileId);
+    if (!author) {
       throw new NotFoundException("User not found.");
     }
     if (!input.creationFeeTxHash?.trim()) {
-      throw new UnprocessableEntityException("Prediction posts require a 1 USDC Arc testnet creation transaction.");
+      throw new UnprocessableEntityException("Prediction posts require a verified X Layer creation transaction.");
     }
-    if (!input.feeCollectorAddress?.trim()) {
-      throw new UnprocessableEntityException("Prediction posts require the Arc testnet fee collector address.");
+    if (!input.chainMarketKey?.trim()) {
+      throw new UnprocessableEntityException("Prediction posts require the on-chain market key.");
+    }
+    if (!author.walletAddress) {
+      throw new UnprocessableEntityException("Prediction posts require a wallet-backed profile.");
+    }
+
+    const verified = await this.xLayerVerification.verifyPredictionCreated({
+      txHash: input.creationFeeTxHash,
+      marketKey: input.chainMarketKey,
+      creatorAddress: author.walletAddress,
+    });
+    const existingMarket = await this.marketModel.exists({
+      $or: [
+        { creationFeeTxHash: input.creationFeeTxHash.trim() },
+        { chainMarketKey: input.chainMarketKey.trim().toLowerCase() },
+      ],
+    });
+    if (existingMarket) {
+      throw new ConflictException("This X Layer prediction transaction has already been recorded.");
     }
 
     const post = await this.postModel.create({
@@ -282,9 +314,12 @@ export class PostsService {
       resolutionSource: input.resolutionSource.trim(),
       yesCondition: input.yesCondition.trim(),
       noCondition: input.noCondition.trim(),
-      marketCreationFeeUsdc: 1,
+      marketCreationFeeUsdc: this.xLayerVerification.formatUnits(verified.feeAmount),
       creationFeeTxHash: input.creationFeeTxHash.trim(),
-      feeCollectorAddress: input.feeCollectorAddress.trim(),
+      feeCollectorAddress: input.feeCollectorAddress.trim() || verified.contractAddress,
+      chainMarketKey: input.chainMarketKey.trim().toLowerCase(),
+      marketContractAddress: verified.contractAddress,
+      xLayerChainId: verified.chainId,
       status: "open_for_votes",
     });
 

@@ -68,10 +68,14 @@ export class CreateMarketPostDto {
   noCondition: string;
 
   @IsString()
-  @Length(1, 120, { message: "Prediction posts require a 1 USDC Arc testnet creation transaction." })
+  @Length(1, 120, { message: "Prediction posts require a verified X Layer creation transaction." })
   creationFeeTxHash: string;
 
   @IsString()
-  @Length(1, 120, { message: "Prediction posts require the Arc testnet fee collector address." })
+  @Length(1, 120, { message: "Prediction posts require the X Layer market contract address." })
   feeCollectorAddress: string;
+
+  @IsString()
+  @Length(66, 66, { message: "Prediction posts require the on-chain market key." })
+  chainMarketKey: string;
 }

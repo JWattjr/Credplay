@@ -9,6 +9,7 @@ import {
   type MarketInput,
   type Profile,
 } from "@/lib/credplay";
+import { createMarketKey } from "@/lib/credplayContract";
 import { reviewPredictionPost, type CredPlayReview } from "@/lib/credplayAgent";
 import { useUsdcTransfer } from "@/hooks/useUsdcTransfer";
 
@@ -29,7 +30,7 @@ const PREDICTION_CATEGORIES = [
 ];
 
 export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
-  const { transferToTreasury } = useUsdcTransfer();
+  const { createPredictionOnChain } = useUsdcTransfer();
   const [content, setContent] = useState("");
   const [isMarket, setIsMarket] = useState(false);
   const [market, setMarket] = useState<MarketInput>({
@@ -122,12 +123,14 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
 
     try {
       if (isMarket) {
-        const payment = await transferToTreasury(PREDICTION_CREATION_FEE_USDT);
+        const marketKey = createMarketKey();
+        const payment = await createPredictionOnChain(PREDICTION_CREATION_FEE_USDT, marketKey);
         const result = await createMarketPost(profile.id, {
           ...market,
           content,
           creationFeeTxHash: payment.hash,
-          feeCollectorAddress: payment.treasuryAddress,
+          feeCollectorAddress: payment.contractAddress,
+          chainMarketKey: payment.marketKey,
         });
         if (result.warning) setError(result.warning);
         setMarket({
@@ -156,36 +159,36 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
   }
 
   return (
-    <div className="flex gap-4 rounded-[18px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+    <div className="flex gap-4 rounded-[8px] border border-white/10 bg-[linear-gradient(155deg,rgba(20,21,24,0.96),rgba(5,5,5,0.96))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.28)]">
       {/* Avatar */}
       <div className="flex-shrink-0">
-        <div className="h-10 w-10 rounded-full bg-brand-secondary/30 border border-brand-secondary/40" />
+        <div className="h-10 w-10 rounded-full border border-brand-secondary/40 bg-brand-secondary/15" />
       </div>
       
       <div className="flex-1 flex flex-col pt-1">
         <textarea 
           disabled={!profile || saving}
           onChange={(event) => setContent(event.target.value)}
-          placeholder={profile ? "What's your World Cup prediction? ⚽" : "Connect wallet to post"}
+          placeholder={profile ? "What's your World Cup prediction?" : "Connect wallet to post"}
           value={content}
-          className="min-h-[60px] w-full resize-none border-none bg-transparent text-lg font-semibold text-[var(--foreground)] outline-none placeholder:text-[var(--muted)]"
+          className="min-h-[60px] w-full resize-none border-none bg-transparent text-lg font-bold text-white outline-none placeholder:text-[var(--muted)]"
         />
 
         {isMarket && (
-          <div className="mt-3 grid gap-2 rounded-[13px] border border-dashed border-[var(--border)] bg-[var(--surface-muted)] p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 font-mono text-[11px] text-[var(--muted)]">
+          <div className="mt-3 grid gap-2 rounded-[8px] border border-white/10 bg-black/25 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] border border-brand-secondary/25 bg-brand-secondary/10 px-3 py-2 font-mono text-[11px] text-brand-secondary">
               <span>Prediction posts cost {PREDICTION_CREATION_FEE_USDT} USDT</span>
               <span>CredPlay review required</span>
             </div>
             <input
-              className="h-10 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted)]"
+              className="h-10 rounded-[8px] border border-white/10 bg-black/35 px-3 text-sm text-white outline-none placeholder:text-[var(--muted)] focus:border-brand-secondary/50"
               onChange={(event) => setMarket((current) => ({ ...current, question: event.target.value }))}
               placeholder="Prediction question (e.g. Will Nigeria qualify from the group stage?)"
               value={market.question}
             />
             <div className="grid gap-2 sm:grid-cols-2">
               <select
-                className="h-10 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none"
+                className="h-10 rounded-[8px] border border-white/10 bg-black/35 px-3 text-sm text-white outline-none focus:border-brand-secondary/50"
                 onChange={(event) => setMarket((current) => ({ ...current, category: event.target.value }))}
                 value={market.category}
               >
@@ -194,33 +197,33 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
                 ))}
               </select>
               <input
-                className="h-10 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none"
+                className="h-10 rounded-[8px] border border-white/10 bg-black/35 px-3 text-sm text-white outline-none focus:border-brand-secondary/50"
                 onChange={(event) => setMarket((current) => ({ ...current, deadline: event.target.value }))}
                 type="datetime-local"
                 value={market.deadline}
               />
             </div>
             <input
-              className="h-10 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted)]"
+              className="h-10 rounded-[8px] border border-white/10 bg-black/35 px-3 text-sm text-white outline-none placeholder:text-[var(--muted)] focus:border-brand-secondary/50"
               onChange={(event) => setMarket((current) => ({ ...current, resolutionSource: event.target.value }))}
               placeholder="Resolution source (e.g. FIFA official results)"
               value={market.resolutionSource}
             />
             <div className="grid gap-2 sm:grid-cols-2">
               <input
-                className="h-10 rounded-[8px] border border-brand-secondary/40 bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted)]"
+                className="h-10 rounded-[8px] border border-brand-secondary/40 bg-black/35 px-3 text-sm text-white outline-none placeholder:text-[var(--muted)]"
                 onChange={(event) => setMarket((current) => ({ ...current, yesCondition: event.target.value }))}
                 placeholder="YES condition"
                 value={market.yesCondition}
               />
               <input
-                className="h-10 rounded-[8px] border border-downvote/40 bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted)]"
+                className="h-10 rounded-[8px] border border-downvote/40 bg-black/35 px-3 text-sm text-white outline-none placeholder:text-[var(--muted)]"
                 onChange={(event) => setMarket((current) => ({ ...current, noCondition: event.target.value }))}
                 placeholder="NO condition"
                 value={market.noCondition}
               />
             </div>
-            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] p-3">
+            <div className="rounded-[8px] border border-white/10 bg-black/30 p-3">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <span className="font-mono text-[11px] font-black uppercase tracking-[0.12em] text-[var(--foreground)]">
                   CredPlay Prediction Review
@@ -277,7 +280,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
           </div>
           
           <button
-            className={`rounded-[10px] px-5 py-2 font-mono text-[10px] font-black uppercase tracking-[0.16em] transition-opacity ${
+            className={`rounded-[8px] px-5 py-2 font-mono text-[10px] font-black uppercase tracking-[0.16em] transition-opacity ${
               canUsePrimaryAction
                 ? "bg-brand-secondary text-black hover:opacity-85"
                 : "cursor-not-allowed bg-zinc-700 text-zinc-500"

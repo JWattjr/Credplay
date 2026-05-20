@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Goal, ShieldCheck, TrendingUp } from "lucide-react";
 import ComposeBox from "@/components/feed/ComposeBox";
 import FeedTabs, { type FeedTabId } from "@/components/feed/FeedTabs";
 import MarketCard from "@/components/post/MarketCard";
@@ -85,8 +86,36 @@ export default function FeedShell() {
 
   return (
     <div className="flex flex-col gap-3 py-3">
-      <div className="rounded-[18px] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-sm">
-        <div className="mb-2 text-xs font-black text-[var(--foreground)]">Category</div>
+      <section className="overflow-hidden rounded-[8px] border border-white/10 bg-[linear-gradient(145deg,rgba(22,23,26,0.96),rgba(5,5,5,0.98))] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.4)]">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="mb-2 flex items-center gap-2 font-mono text-[11px] font-black uppercase tracking-[0.16em] text-brand-secondary">
+              <Goal className="h-4 w-4" />
+              World Cup markets
+            </p>
+            <h1 className="max-w-[11ch] text-4xl font-black leading-[0.95] text-white sm:text-5xl">
+              The future of football calls.
+            </h1>
+            <p className="mt-3 max-w-md text-sm leading-relaxed text-[var(--muted)]">
+              Predict match outcomes, seed conviction, and build a reputation fans can verify.
+            </p>
+          </div>
+          <div className="hidden min-w-[160px] rounded-[8px] border border-brand-secondary/25 bg-brand-secondary/10 p-4 sm:block">
+            <div className="flex items-center gap-2 text-brand-secondary">
+              <ShieldCheck className="h-4 w-4" />
+              <span className="font-mono text-[11px] font-black uppercase">Cred layer</span>
+            </div>
+            <p className="mt-3 text-3xl font-black text-white">98.7</p>
+            <p className="font-mono text-[11px] text-[var(--muted)]">top signal score</p>
+          </div>
+        </div>
+      </section>
+
+      <div className="rounded-[8px] border border-white/10 bg-black/45 p-3 shadow-sm">
+        <div className="mb-2 flex items-center gap-2 font-mono text-[11px] font-black uppercase tracking-[0.14em] text-[var(--muted)]">
+          <TrendingUp className="h-3.5 w-3.5 text-brand-secondary" />
+          Category
+        </div>
         <div className="flex gap-2 overflow-x-auto pb-1">
           {FEED_CATEGORIES.map((category) => {
             const isActive = activeCategory === category;
@@ -94,10 +123,10 @@ export default function FeedShell() {
             return (
               <button
                 aria-pressed={isActive}
-                className={`h-9 shrink-0 rounded-[8px] border px-4 text-sm transition-colors ${
+                className={`h-9 shrink-0 rounded-[999px] border px-4 font-mono text-xs font-black transition-colors ${
                   isActive
-                    ? "border-brand-secondary bg-brand-secondary/15 text-[var(--foreground)]"
-                    : "border-[var(--border)] bg-[var(--surface-solid)] text-[var(--foreground)] hover:border-[var(--border-strong)]"
+                    ? "border-brand-secondary bg-brand-secondary/15 text-brand-secondary"
+                    : "border-white/10 bg-black/30 text-[var(--muted)] hover:border-[var(--border-strong)] hover:text-white"
                 }`}
                 key={category}
                 onClick={() => setActiveCategory(isActive ? null : category)}

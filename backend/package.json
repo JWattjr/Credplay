@@ -1,7 +1,7 @@
 {
-  "name": "verity-backend",
+  "name": "credplay-backend",
   "version": "0.1.0",
-  "description": "Verity NestJS Backend",
+  "description": "CredPlay sports prediction backend",
   "author": "",
   "private": true,
   "license": "UNLICENSED",

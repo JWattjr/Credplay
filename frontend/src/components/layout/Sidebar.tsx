@@ -2,31 +2,29 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  Home, 
-  Crosshair, 
-  Bell, 
-  User, 
-  Wallet,
-  TrendingUp,
-  CircleDollarSign,
-  PenSquare,
+import {
+  Award,
+  Bell,
+  ChevronDown,
+  Crosshair,
+  Home,
+  LineChart,
+  Target,
   Trophy,
-  Award
+  User,
+  Wallet,
 } from "lucide-react";
-import ThemeToggle from "@/components/layout/ThemeToggle";
-import WalletConnectControl from "@/components/wallet/WalletConnectControl";
 import { useUsdcBalance } from "@/hooks/useUsdcBalance";
 import { useWalletProfile } from "@/hooks/useWalletProfile";
-import { displayHandle, displayName } from "@/lib/credplay";
+import { displayName } from "@/lib/credplay";
 
 const NAV_ITEMS = [
   { icon: Home, label: "Home", href: "/" },
-  { icon: Crosshair, label: "Prediction Arena", href: "/explore" },
-  { icon: TrendingUp, label: "Live Markets", href: "/markets" },
+  { icon: Target, label: "Prediction Arena", href: "/explore" },
+  { icon: LineChart, label: "Live Markets", href: "/markets" },
   { icon: Trophy, label: "Standings", href: "/standings" },
   { icon: Award, label: "Trophies", href: "/trophies" },
-  { icon: Bell, label: "Notifications", href: "/notifications" },
+  { icon: Bell, label: "Notifications", href: "/notifications", badge: "3" },
   { icon: Wallet, label: "Wallet", href: "/wallet" },
   { icon: User, label: "Fan Passport", href: "/profile" },
 ];
@@ -37,70 +35,65 @@ export default function Sidebar() {
   const { profile, isConnected } = useWalletProfile();
 
   return (
-    <div className="flex h-full flex-col rounded-[18px] border border-[var(--border)] bg-[var(--surface)] p-2 shadow-sm">
-      {/* Logo */}
-      <div className="mb-4 flex items-center justify-between">
-        <Link href="/" className="group flex w-fit items-center gap-3 py-4 xl:px-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-secondary text-xl font-black text-black transition-transform group-hover:-translate-y-0.5">
-            ⚽
-          </div>
-          <span className="hidden text-2xl font-black tracking-tight text-[var(--foreground)] xl:block">CredPlay</span>
-        </Link>
-        <div className="hidden xl:block">
-          <ThemeToggle />
-        </div>
-      </div>
+    <div className="flex h-full flex-col px-4 py-7 xl:px-6">
+      <Link href="/" className="flex items-center gap-3">
+        <span className="cp-logo-mark shrink-0">C</span>
+        <span className="hidden xl:block">
+          <span className="block text-3xl font-black tracking-[-0.02em] text-white">CredPlay</span>
+          <span className="block text-xs font-bold text-white">
+            Predict. <span className="cp-green-text">Rank.</span> Win.
+          </span>
+        </span>
+      </Link>
 
-      {/* Nav Links */}
-      <nav className="flex-1 space-y-1">
+      <nav className="mt-14 flex-1 space-y-3">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href;
           return (
-            <Link key={item.label} href={item.href} className="group flex w-fit items-center xl:w-full">
-              <div className={`flex items-center gap-4 rounded-[13px] p-3 transition-all duration-200 xl:w-full xl:px-4 xl:py-3 ${
-                isActive 
-                  ? "bg-brand-secondary text-black font-black" 
-                  : "text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]"
-              }`}>
-                <item.icon className="h-6 w-6 xl:h-5 xl:w-5" />
-                <span className="hidden text-sm font-bold xl:block">{item.label}</span>
-              </div>
+            <Link
+              className={`group relative flex h-14 items-center gap-4 rounded-[8px] px-4 text-sm font-semibold transition-all ${
+                isActive
+                  ? "bg-[linear-gradient(90deg,rgba(0,224,88,0.9),rgba(0,224,88,0.36))] text-white shadow-[0_12px_30px_rgba(0,224,88,0.18)]"
+                  : "text-[#c7cbd2] hover:bg-white/5 hover:text-white"
+              }`}
+              href={item.href}
+              key={item.label}
+            >
+              <item.icon className="h-6 w-6 shrink-0 xl:h-5 xl:w-5" />
+              <span className="hidden xl:block">{item.label}</span>
+              {item.badge && (
+                <span className="ml-auto hidden h-5 min-w-5 items-center justify-center rounded-full bg-brand-secondary px-1.5 text-[10px] font-black text-black xl:flex">
+                  {item.badge}
+                </span>
+              )}
             </Link>
           );
         })}
       </nav>
 
-      {/* Action Buttons */}
-      <div className="mb-6 mt-auto flex flex-col items-center gap-4 xl:w-full xl:items-stretch">
-        <div className="mb-2 hidden items-center justify-between rounded-[13px] border border-dashed border-[var(--border)] bg-[var(--surface-muted)] p-4 xl:flex">
-          <div className="flex items-center gap-2">
-            <CircleDollarSign className="h-5 w-5 text-brand-accent" />
-            <span className="font-mono text-sm font-bold text-[var(--foreground)]">
-              {balance.isLoading ? "..." : formatted} USDT
-            </span>
+      <div className="hidden xl:block">
+        <div className="cp-panel rounded-[8px] p-4">
+          <div className="flex items-center gap-3">
+            <div className="grid h-12 w-12 place-items-center rounded-full border border-brand-secondary/30 bg-white/10 font-bold text-white">
+              {isConnected ? displayName(profile).slice(0, 2).toUpperCase() : "FP"}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-black text-white">
+                {isConnected ? displayName(profile) : "Fan Player"}
+              </p>
+              <p className="text-xs font-bold text-brand-secondary">Pro Predictor</p>
+            </div>
+            <ChevronDown className="h-4 w-4 text-[var(--muted)]" />
           </div>
-        </div>
-
-        <div className="hidden xl:block">
-          <WalletConnectControl />
-        </div>
-        
-        <button className="flex h-14 w-14 items-center justify-center rounded-[13px] bg-brand-secondary text-xl font-black text-black transition-opacity hover:opacity-85 xl:h-14 xl:w-full">
-          <span className="hidden font-mono text-xs uppercase tracking-[0.16em] xl:block">Predict</span>
-          <PenSquare className="h-6 w-6 xl:hidden" />
-        </button>
-      </div>
-
-      {/* Mini Profile */}
-      <div className="mb-2 flex cursor-pointer items-center justify-center gap-3 rounded-[13px] p-3 transition-colors hover:bg-[var(--surface-hover)] xl:justify-start xl:p-4">
-        <div className="h-10 w-10 rounded-full bg-brand-secondary/30 border border-brand-secondary/40" />
-        <div className="hidden xl:flex flex-col">
-          <span className="text-sm font-black text-[var(--foreground)]">
-            {isConnected ? displayName(profile) : "Connect wallet"}
-          </span>
-          <span className="font-mono text-xs text-[var(--muted)]">
-            {isConnected ? displayHandle(profile) : "@wallet"}
-          </span>
+          <div className="mt-4 border-t border-white/10 pt-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-2 font-mono text-xs text-white">
+                <Crosshair className="h-4 w-4 text-brand-secondary" />
+                {balance.isLoading ? "..." : formatted} CP
+              </span>
+              <span className="text-[var(--muted)]">Wallet</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

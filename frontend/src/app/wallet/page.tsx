@@ -6,9 +6,9 @@ import WalletSummary from "@/components/wallet/WalletSummary";
 export default function WalletPage() {
   return (
     <PagePanel
-      description="Connected wallet, Arc testnet network status, and testnet USDC balance."
+      description="Connected wallet, X Layer network status, and USDT balance."
       eyebrow="Wallet"
-      title="Arc Testnet Wallet"
+      title="X Layer Wallet"
     >
       <WalletSummary />
 
@@ -30,7 +30,7 @@ export default function WalletPage() {
             <span className="font-mono text-xs font-black uppercase tracking-[0.16em]">Earnings</span>
           </div>
           <p className="mt-4 text-3xl font-black text-[var(--foreground)]">0.00</p>
-          <p className="font-mono text-xs text-[var(--muted)]">Future creator and payout earnings</p>
+          <p className="font-mono text-xs text-[var(--muted)]">Future sports prediction payouts</p>
         </div>
       </section>
     </PagePanel>

@@ -14,7 +14,7 @@ import { LikeSchema, ReshareSchema } from "./modules/interactions/interactions.m
 
 dotenv.config();
 
-const mongoUri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/verity";
+const mongoUri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/credplay";
 
 // Compile Mongoose models
 const UserModel = mongoose.model("User", UserSchema);
@@ -33,7 +33,7 @@ async function createUser(username: string, displayName = username) {
     username,
     displayName,
     walletAddress: `seed-${username.toLowerCase()}`,
-    bio: `${displayName} is testing Verity signal markets.`,
+    bio: `${displayName} is testing CredPlay football markets.`,
   });
 }
 
@@ -139,35 +139,35 @@ async function seed() {
   await clearSeededCollections();
 
   const [jude, maya, theo] = await Promise.all([
-    createUser("JudeSignal"),
+    createUser("JudeStriker", "Jude Striker"),
     createUser("MayaOracle", "Maya Oracle"),
     createUser("TheoMarkets", "Theo Markets"),
   ]);
   const generatedVoters = await Promise.all(
-    Array.from({ length: 60 }, (_, index) => createUser(`SignalVoter${index + 1}`)),
+    Array.from({ length: 60 }, (_, index) => createUser(`FootballFan${index + 1}`)),
   );
 
-  const normalOne = await createNormalPost(jude.id, "Signal check: free votes now gate markets before USDC review.");
-  const normalTwo = await createNormalPost(maya.id, "Prediction quality starts with measurable outcomes, not vibes.");
+  const normalOne = await createNormalPost(jude.id, "Match check: fan votes now qualify football markets before USDT review.");
+  const normalTwo = await createNormalPost(maya.id, "Strong football predictions need measurable outcomes, not vibes.");
 
   const closeMarket = await createMarketPost({
     authorId: theo.id,
-    content: "Will Arc testnet community volume exceed the stated milestone before the deadline?",
-    question: "Will Arc testnet community volume exceed 100,000 USDC before the deadline?",
-    category: "Crypto",
+    content: "Will Argentina beat Mexico in their World Cup opener?",
+    question: "Will Argentina beat Mexico in their World Cup opener?",
+    category: "World Cup",
   });
   const qualifiedMarket = await createMarketPost({
     authorId: jude.id,
-    content: "This seed market already qualifies for review.",
-    question: "Will the Verity demo feed contain at least 5 seeded interactions by tomorrow?",
-    category: "Culture",
+    content: "This Brazil vs France goals market already qualifies for review.",
+    question: "Will Brazil vs France finish with over 2.5 total goals?",
+    category: "Goals",
     status: "qualified",
   });
   const openMarket = await createMarketPost({
     authorId: maya.id,
-    content: "Early open-for-votes seed market.",
-    question: "Will Bitcoin close above 100000 USD on the listed deadline?",
-    category: "Economics",
+    content: "Early Golden Boot market open for fan votes.",
+    question: "Will Kylian Mbappe win the next World Cup Golden Boot?",
+    category: "Players",
   });
 
   await CommentModel.create([

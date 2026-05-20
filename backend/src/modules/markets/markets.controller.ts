@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from "@nestjs/common";
 import { MarketsService } from "./markets.service";
-import { FetchMarketsQueryDto, CastFreeVoteDto, ExecuteTradeDto } from "./markets.dto";
+import { FetchMarketsQueryDto, CastFreeVoteDto, ExecuteTradeDto, SeedMarketLiquidityDto } from "./markets.dto";
 
 @Controller("markets")
 export class MarketsController {
@@ -63,6 +63,20 @@ export class MarketsController {
   @HttpCode(HttpStatus.OK)
   async approveMarketForTrading(@Param("marketId") marketId: string) {
     return this.marketsService.approveMarketForTrading(marketId);
+  }
+
+  @Post(":marketId/seed")
+  @HttpCode(HttpStatus.OK)
+  async seedMarketLiquidity(
+    @Param("marketId") marketId: string,
+    @Body() dto: SeedMarketLiquidityDto,
+  ) {
+    return this.marketsService.seedMarketLiquidity({
+      marketId,
+      profileId: dto.profileId,
+      side: dto.side,
+      txHash: dto.txHash,
+    });
   }
 
   @Post(":marketId/trade")

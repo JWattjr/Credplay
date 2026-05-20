@@ -48,7 +48,7 @@ export default function ProfilePage() {
           Badge
         </h2>
         <p className="mt-3 text-sm text-[var(--muted)]">
-          Top 10% predictor in AI/Tech markets this month.
+          Top 10% predictor in World Cup markets this month.
         </p>
       </section>
     </PagePanel>

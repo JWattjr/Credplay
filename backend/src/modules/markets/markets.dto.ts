@@ -71,3 +71,15 @@ export class ExecuteTradeDto {
   @Length(0, 120)
   txHash?: string;
 }
+
+export class SeedMarketLiquidityDto {
+  @IsMongoId({ message: "A valid profile id is required." })
+  profileId: string;
+
+  @IsEnum(["YES", "NO"], { message: "Seed side must be YES or NO." })
+  side: "YES" | "NO";
+
+  @IsString()
+  @Length(66, 66, { message: "A valid X Layer transaction hash is required." })
+  txHash: string;
+}

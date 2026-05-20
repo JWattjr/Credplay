@@ -16,11 +16,18 @@ export const erc20TransferAbi = [
   },
 ] as const;
 
-export function getTreasuryAddress() {
-  const address = process.env.NEXT_PUBLIC_CREDPLAY_TREASURY_ADDRESS;
-  if (!address || !isAddress(address)) return null;
-  return address as Address;
-}
+export const erc20ApproveAbi = [
+  {
+    name: "approve",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "value", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+] as const;
 
 export function getUsdtTokenAddress() {
   if (!isAddress(xLayerUsdtAddress)) return null;
