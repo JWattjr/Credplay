@@ -1,0 +1,14 @@
+export const PREDICTION_CREATION_FEE_USDT = 2;
+export const TRADING_FEE_BPS = 200;
+
+export function formatTradingFee(bps = TRADING_FEE_BPS) {
+  return `${(bps / 100).toFixed(1)}%`;
+}
+
+export function calculateTradingFee(amount: number, bps = TRADING_FEE_BPS) {
+  return amount * (bps / 10_000);
+}
+
+export function calculateGrossUsdt(amount: number, bps = TRADING_FEE_BPS) {
+  return amount + calculateTradingFee(amount, bps);
+}

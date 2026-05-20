@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-primary: #0d4a2e;
+  --color-brand-secondary: #2ecc71;
+  --color-brand-accent: #d4a843;
+  --color-brand-gold: #d4a843;
+  --color-brand-pitch: #1a6b3c;
+  
+  --color-bg-dark: #0a0f0d;
+  --color-bg-panel: rgba(16, 24, 20, 0.95);
+  --color-bg-panel-hover: rgba(20, 30, 24, 0.98);
+  
+  --color-text-primary: #f0f5f2;
+  --color-text-secondary: #8fa89a;
+  
+  --color-upvote: #2ecc71;
+  --color-downvote: #e74c3c;
+}
+
+:root {
+  --background: #080d0b;
+  --foreground: #f0f5f2;
+  --surface: rgba(16, 24, 20, 0.95);
+  --surface-solid: #101814;
+  --surface-muted: #162118;
+  --surface-hover: rgba(46, 204, 113, 0.08);
+  --border: rgba(46, 204, 113, 0.15);
+  --border-strong: rgba(46, 204, 113, 0.35);
+  --muted: #8fa89a;
+  --inverse: #f0f5f2;
+  --inverse-text: #080d0b;
+  --panel-border: var(--border);
+  --panel-shadow: 0 1px 0 rgba(46, 204, 113, 0.06);
+}
+
+:root[data-theme="light"] {
+  --background: #f3f7f5;
+  --foreground: #0a1a10;
+  --surface: rgba(255, 255, 255, 0.95);
+  --surface-solid: #ffffff;
+  --surface-muted: #edf5f0;
+  --surface-hover: rgba(13, 74, 46, 0.06);
+  --border: rgba(13, 74, 46, 0.15);
+  --border-strong: rgba(13, 74, 46, 0.30);
+  --muted: #5a7a68;
+  --inverse: #0a1a10;
+  --inverse-text: #f0f5f2;
+  --panel-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: var(--color-bg-panel);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--panel-shadow);
+}
+
+.glass-panel-hover:hover {
+  background: var(--color-bg-panel-hover);
+  border-color: rgba(46, 204, 113, 0.25);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(46, 204, 113, 0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(46, 204, 113, 0.35);
+}
+
+/* Gradients */
+.text-gradient {
+  background: linear-gradient(135deg, #2ecc71, #d4a843);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Football pitch accent line */
+.pitch-line {
+  background: linear-gradient(90deg, transparent, rgba(46, 204, 113, 0.3), transparent);
+  height: 1px;
+}
