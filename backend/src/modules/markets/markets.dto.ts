@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsMongoId, IsNumber, IsOptional, IsString, Length, Min } from "class-validator";
+import { IsBoolean, IsEnum, IsIn, IsMongoId, IsNumber, IsOptional, IsString, Length, Min } from "class-validator";
 import { Transform } from "class-transformer";
 
 export class FetchMarketsQueryDto {
@@ -40,8 +40,13 @@ export class CastFreeVoteDto {
   @IsMongoId()
   profileId?: string;
 
-  @IsEnum(["YES", "NO"], { message: "Vote side must be YES or NO." })
-  side: "YES" | "NO";
+  @IsIn(["YES", "NO", "UP", "DOWN"], { message: "Vote side must be YES, NO, UP, or DOWN." })
+  side: "YES" | "NO" | "UP" | "DOWN";
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 60)
+  optionId?: string;
 }
 
 export class ExecuteTradeDto {

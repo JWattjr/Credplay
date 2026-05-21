@@ -37,7 +37,7 @@ export default function Sidebar() {
   return (
     <div className="flex h-full flex-col px-4 py-7 xl:px-6">
       <Link href="/" className="flex items-center gap-3">
-        <span className="cp-logo-mark shrink-0">C</span>
+        <span aria-hidden="true" className="cp-logo-mark shrink-0" />
         <span className="hidden xl:block">
           <span className="block text-3xl font-black tracking-[-0.02em] text-white">CredPlay</span>
           <span className="block text-xs font-bold text-white">

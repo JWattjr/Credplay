@@ -33,17 +33,23 @@ export function reviewPredictionPost(input: MarketInput): CredPlayReview {
   const yesCondition = input.yesCondition.trim();
   const noCondition = input.noCondition.trim();
   const deadlineDays = daysUntil(input.deadline);
+  const isMultiOption = input.kind === "multi_option";
+  const optionCount = input.options?.filter((option) => option.label.trim()).length || 0;
 
   if (!question) {
-    findings.push({ severity: "blocker", message: "Add a clear YES/NO prediction question." });
+    findings.push({ severity: "blocker", message: "Add a clear prediction question." });
   }
 
   if (question && !question.endsWith("?")) {
     findings.push({ severity: "warning", message: "Phrase the prediction as a question so fans scan it quickly." });
   }
 
-  if (question && !hasNumber(`${question} ${yesCondition} ${noCondition}`)) {
+  if (!isMultiOption && question && !hasNumber(`${question} ${yesCondition} ${noCondition}`)) {
     findings.push({ severity: "blocker", message: "Add a measurable number, percentage, date, score, or count." });
+  }
+
+  if (isMultiOption && optionCount < 2) {
+    findings.push({ severity: "blocker", message: "Add at least two match outcome options." });
   }
 
   if (VAGUE_WORDS.some((word) => question.toLowerCase().includes(word))) {
@@ -62,11 +68,11 @@ export function reviewPredictionPost(input: MarketInput): CredPlayReview {
     findings.push({ severity: "blocker", message: "Name the source that will resolve this prediction." });
   }
 
-  if (yesCondition.length < 12) {
+  if (!isMultiOption && yesCondition.length < 12) {
     findings.push({ severity: "blocker", message: "Make the YES condition explicit enough to resolve without debate." });
   }
 
-  if (noCondition.length < 12) {
+  if (!isMultiOption && noCondition.length < 12) {
     findings.push({ severity: "blocker", message: "Make the NO condition explicit enough to resolve without debate." });
   }
 
@@ -84,6 +90,6 @@ export function reviewPredictionPost(input: MarketInput): CredPlayReview {
     findings:
       findings.length > 0
         ? findings
-        : [{ severity: "info", message: "Clear question, measurable outcome, deadline, and resolution source detected." }],
+        : [{ severity: "info", message: "Clear question, outcomes, deadline, and resolution source detected." }],
   };
 }

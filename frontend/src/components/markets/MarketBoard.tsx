@@ -102,10 +102,14 @@ export default function MarketBoard() {
                 noCondition={item.market.no_condition}
                 onComment={() => commentOn(item)}
                 onOpenDetails={() => router.push(`/markets/${item.market!.id}`)}
+                onOptionVote={(optionId, side) =>
+                  runAction(() => castFreeVote(item.market as MarketPost, profile!.id, side, optionId))
+                }
                 onReshare={() => runAction(() => toggleReshare(item.id, profile!.id, item.viewerReshared))}
                 onShare={() => sharePost(item)}
                 onUsdcVote={() => setActionError("USDT trading is pending review and not active in this phase.")}
                 onVote={(side) => runAction(() => castFreeVote(item.market as MarketPost, profile!.id, side as VoteSide))}
+                options={item.market.options}
                 postContent={item.content}
                 question={item.market.question}
                 resolutionSource={item.market.resolution_source}
@@ -115,6 +119,7 @@ export default function MarketBoard() {
                 time={relativeTime(item.created_at)}
                 dailyVotesRemaining={dailyVotes.votesRemaining}
                 qualificationThreshold={item.market.qualificationThreshold}
+                minimumSeedLiquidity={item.market.minimumSeedLiquidity}
                 totalFreeVotes={item.market.totalFreeVotes}
                 tradingFeeBps={item.market.trading_fee_bps}
                 uniqueVoterThreshold={item.market.uniqueVoterThreshold}

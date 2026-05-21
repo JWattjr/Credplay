@@ -1,5 +1,5 @@
-import { IsBoolean, IsMongoId, IsOptional, IsString, Length, IsISO8601 } from "class-validator";
-import { Transform } from "class-transformer";
+import { IsArray, IsBoolean, IsIn, IsISO8601, IsMongoId, IsOptional, IsString, Length, ValidateNested } from "class-validator";
+import { Transform, Type } from "class-transformer";
 
 export class FeedQueryDto {
   @IsOptional()
@@ -30,6 +30,12 @@ export class CreatePostDto {
   content: string;
 }
 
+export class MarketOptionInputDto {
+  @IsString()
+  @Length(1, 40)
+  label: string;
+}
+
 export class CreateMarketPostDto {
   @IsOptional()
   @IsMongoId()
@@ -52,20 +58,33 @@ export class CreateMarketPostDto {
   @Length(1, 60)
   category: string;
 
+  @IsOptional()
+  @IsIn(["binary", "multi_option"])
+  kind?: "binary" | "multi_option";
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MarketOptionInputDto)
+  options?: MarketOptionInputDto[];
+
   @IsISO8601({}, { message: "A valid deadline date is required." })
   deadline: string;
 
+  @IsOptional()
   @IsString()
   @Length(1, 240)
-  resolutionSource: string;
+  resolutionSource?: string;
 
+  @IsOptional()
   @IsString()
   @Length(1, 500)
-  yesCondition: string;
+  yesCondition?: string;
 
+  @IsOptional()
   @IsString()
   @Length(1, 500)
-  noCondition: string;
+  noCondition?: string;
 
   @IsString()
   @Length(1, 120, { message: "Prediction posts require a verified X Layer creation transaction." })

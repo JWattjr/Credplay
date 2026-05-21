@@ -87,8 +87,8 @@ export default function FeedShell() {
   return (
     <div className="flex flex-col gap-3 py-3">
       <section className="overflow-hidden rounded-[8px] border border-white/10 bg-[linear-gradient(145deg,rgba(22,23,26,0.96),rgba(5,5,5,0.98))] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.4)]">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
+        <div className="mb-4 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <p className="mb-2 flex items-center gap-2 font-mono text-[11px] font-black uppercase tracking-[0.16em] text-brand-secondary">
               <Goal className="h-4 w-4" />
               World Cup markets
@@ -100,13 +100,33 @@ export default function FeedShell() {
               Predict match outcomes, seed conviction, and build a reputation fans can verify.
             </p>
           </div>
-          <div className="hidden min-w-[160px] rounded-[8px] border border-brand-secondary/25 bg-brand-secondary/10 p-4 sm:block">
-            <div className="flex items-center gap-2 text-brand-secondary">
-              <ShieldCheck className="h-4 w-4" />
-              <span className="font-mono text-[11px] font-black uppercase">Cred layer</span>
+
+          <div className="flex items-center justify-between gap-4 sm:justify-end">
+            <div aria-hidden="true" className="soccer-globe">
+              <div className="soccer-globe__surface">
+                <span className="soccer-globe__panel soccer-globe__panel--one flag-argentina" />
+                <span className="soccer-globe__panel soccer-globe__panel--two flag-brazil" />
+                <span className="soccer-globe__panel soccer-globe__panel--three flag-france" />
+                <span className="soccer-globe__panel soccer-globe__panel--four flag-mexico" />
+                <span className="soccer-globe__panel soccer-globe__panel--five flag-usa" />
+                <span className="soccer-globe__panel soccer-globe__panel--six flag-canada" />
+                <span className="soccer-globe__panel soccer-globe__panel--seven flag-japan" />
+                <span className="soccer-globe__panel soccer-globe__panel--eight flag-morocco" />
+                <span className="soccer-globe__panel soccer-globe__panel--nine flag-portugal" />
+                <span className="soccer-globe__panel soccer-globe__panel--ten flag-uruguay" />
+                <span className="soccer-globe__panel soccer-globe__panel--eleven flag-germany" />
+                <span className="soccer-globe__panel soccer-globe__panel--twelve flag-south-korea" />
+              </div>
             </div>
-            <p className="mt-3 text-3xl font-black text-white">98.7</p>
-            <p className="font-mono text-[11px] text-[var(--muted)]">top signal score</p>
+
+            <div className="min-w-[160px] rounded-[8px] border border-brand-secondary/25 bg-brand-secondary/10 p-4">
+              <div className="flex items-center gap-2 text-brand-secondary">
+                <ShieldCheck className="h-4 w-4" />
+                <span className="font-mono text-[11px] font-black uppercase">Cred layer</span>
+              </div>
+              <p className="mt-3 text-3xl font-black text-white">98.7</p>
+              <p className="font-mono text-[11px] text-[var(--muted)]">top signal score</p>
+            </div>
           </div>
         </div>
       </section>
@@ -171,6 +191,7 @@ export default function FeedShell() {
               onReshare={() => runAction(() => toggleReshare(item.id, profile!.id, item.viewerReshared))}
               onShare={() => sharePost(item)}
               onUsdcVote={() => setActionError("USDT trading is pending review and not active in this phase.")}
+              onOptionVote={(market, optionId, side) => runAction(() => castFreeVote(market, profile!.id, side, optionId))}
               onVote={(market, side) => runAction(() => castFreeVote(market, profile!.id, side))}
             />
           ))
@@ -193,6 +214,7 @@ function FeedCard({
   onReshare,
   onShare,
   onUsdcVote,
+  onOptionVote,
   onVote,
 }: {
   item: FeedPost;
@@ -203,6 +225,7 @@ function FeedCard({
   onReshare: () => void;
   onShare: () => void;
   onUsdcVote: (market: MarketPost, side: VoteSide, amount: number) => void;
+  onOptionVote: (market: MarketPost, optionId: string, side: "UP" | "DOWN") => void;
   onVote: (market: MarketPost, side: VoteSide) => void;
 }) {
   if (item.type === "market" && item.market) {
@@ -221,12 +244,14 @@ function FeedCard({
         noCondition={item.market.no_condition}
         onComment={onComment}
         onOpenDetails={() => onOpenMarket(item.market!)}
+        onOptionVote={(optionId, side) => onOptionVote(item.market!, optionId, side)}
         onReshare={onReshare}
         onShare={onShare}
         onUsdcVote={(side, amount) => onUsdcVote(item.market!, side, amount)}
         onVote={(side) => onVote(item.market!, side)}
         postContent={item.content}
         question={item.market.question}
+        options={item.market.options}
         resolutionSource={item.market.resolution_source}
         reshares={item.resharesCount}
         reshared={item.viewerReshared}
@@ -234,6 +259,7 @@ function FeedCard({
         time={relativeTime(item.created_at)}
         dailyVotesRemaining={dailyVotesRemaining}
         qualificationThreshold={item.market.qualificationThreshold}
+        minimumSeedLiquidity={item.market.minimumSeedLiquidity}
         totalFreeVotes={item.market.totalFreeVotes}
         tradingFeeBps={item.market.trading_fee_bps}
         uniqueVoterThreshold={item.market.uniqueVoterThreshold}

@@ -4,8 +4,9 @@ import * as usersApi from "@/api/users";
 import * as credplayApi from "@/api/credplay";
 
 export type PostType = "normal" | "market";
-export type VoteSide = "YES" | "NO";
+export type VoteSide = "YES" | "NO" | "UP" | "DOWN";
 export type MarketTradeAction = "BUY" | "SELL";
+export type MarketKind = "binary" | "multi_option";
 
 /** CredPlay market lifecycle */
 export type MarketStatus =
@@ -63,6 +64,8 @@ export interface MarketPost {
   yesCondition?: string;
   no_condition: string;
   noCondition?: string;
+  kind?: MarketKind;
+  options?: MarketOption[];
   status: string;
   free_yes_votes: number;
   freeYesVotes?: number;
@@ -72,6 +75,7 @@ export interface MarketPost {
   uniqueVotersCount?: number;
   qualificationThreshold?: number;
   uniqueVoterThreshold?: number;
+  minimumSeedLiquidity?: number;
   usdc_yes_amount: number;
   usdcYesAmount?: number;
   usdc_no_amount: number;
@@ -106,6 +110,14 @@ export interface MarketPost {
   created_at: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface MarketOption {
+  id: string;
+  label: string;
+  upVotes: number;
+  downVotes: number;
+  seedAmount?: number;
 }
 
 export interface FeedPost {
@@ -169,6 +181,8 @@ export interface MarketInput {
   content: string;
   question: string;
   category: string;
+  kind?: MarketKind;
+  options?: { label: string }[];
   deadline: string;
   resolutionSource: string;
   yesCondition: string;

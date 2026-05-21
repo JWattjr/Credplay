@@ -12,7 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import { PREDICTION_CREATION_FEE_USDT } from "@/lib/fees";
-import type { VoteSide } from "@/lib/credplay";
+import type { MarketOption, VoteSide } from "@/lib/credplay";
 
 export interface MarketCardProps {
   variant?: "compact" | "detail";
@@ -26,6 +26,7 @@ export interface MarketCardProps {
   resolutionSource?: string;
   yesCondition?: string;
   noCondition?: string;
+  options?: MarketOption[];
   status?: string;
   yesPercent: number;
   usdcYes: number;
@@ -38,6 +39,7 @@ export interface MarketCardProps {
   uniqueVotersCount?: number;
   qualificationThreshold?: number;
   uniqueVoterThreshold?: number;
+  minimumSeedLiquidity?: number;
   dailyVotesRemaining?: number;
   votingDisabledMessage?: string | null;
   comments: number;
@@ -45,6 +47,7 @@ export interface MarketCardProps {
   viewerVote?: VoteSide | null;
   reshared?: boolean;
   onVote?: (side: VoteSide) => void;
+  onOptionVote?: (optionId: string, side: "UP" | "DOWN") => void;
   onUsdcVote?: (side: VoteSide, amount: number) => void;
   onOpenDetails?: () => void;
   onComment?: () => void;
@@ -85,6 +88,7 @@ export default function MarketCard({
   resolutionSource,
   yesCondition,
   noCondition,
+  options = [],
   status = "collecting_calls",
   yesPercent,
   usdcYes,
@@ -95,6 +99,7 @@ export default function MarketCard({
   totalFreeVotes,
   uniqueVotersCount = 0,
   qualificationThreshold = 20,
+  minimumSeedLiquidity = 50,
   dailyVotesRemaining = 10,
   votingDisabledMessage,
   comments,
@@ -102,12 +107,14 @@ export default function MarketCard({
   viewerVote,
   reshared = false,
   onVote,
+  onOptionVote,
   onOpenDetails,
   onComment,
   onReshare,
   onShare,
 }: MarketCardProps) {
   const totalUsdt = usdcYes + usdcNo;
+  const isMultiOption = options.length > 0;
   const hasBackedSentiment = totalUsdt > 0;
   const totalVotes = totalFreeVotes ?? freeYesVotes + freeNoVotes;
   const freeYesPercent = totalVotes > 0 ? (freeYesVotes / totalVotes) * 100 : 50;
@@ -119,12 +126,12 @@ export default function MarketCard({
   const isClosed = ["closed", "resolving", "resolved", "settled", "voided", "locked"].includes(status);
   const canFreeVote = isCollecting || isUnderReview;
   const hasViewerVoted = Boolean(viewerVote);
-  const voteDisabled = !canFreeVote || hasViewerVoted || dailyVotesRemaining <= 0;
+  const voteDisabled = !canFreeVote || (!isMultiOption && hasViewerVoted) || dailyVotesRemaining <= 0;
   const voteThresholdMet = totalVotes >= qualificationThreshold;
   const votesToReview = Math.max(0, qualificationThreshold - totalVotes);
   const qualificationProgress = Math.min(100, (totalVotes / qualificationThreshold) * 100);
   const seedLiquidity = totalUsdt;
-  const requiredSeedLiquidity = 50;
+  const requiredSeedLiquidity = minimumSeedLiquidity;
   const seedProgress = Math.min(100, (seedLiquidity / requiredSeedLiquidity) * 100);
   const isDetail = variant === "detail";
   const creatorLabel = handle === "@unknown" ? name : handle;
@@ -175,23 +182,67 @@ export default function MarketCard({
         <p className="mb-4 line-clamp-2 text-sm leading-relaxed text-[var(--muted)]">{postContent}</p>
       )}
 
-      <div className="mb-2 flex items-end justify-between">
-        <div>
-          <span className="text-[32px] font-black leading-none text-brand-secondary">
-            {displayYesPercent.toFixed(0)}%
-          </span>
-          <span className="ml-2 font-mono text-sm font-black text-brand-secondary">Yes</span>
-        </div>
-        <div>
-          <span className="text-[32px] font-black leading-none text-white/90">{noPercent.toFixed(0)}%</span>
-          <span className="ml-2 font-mono text-sm font-black text-[var(--muted)]">No</span>
-        </div>
-      </div>
+      {isMultiOption ? (
+        <div className="mb-4 grid gap-2" onClick={stopClick}>
+          {options.map((option) => {
+            const optionVotes = option.upVotes + option.downVotes;
+            const optionUpPercent = optionVotes > 0 ? (option.upVotes / optionVotes) * 100 : 50;
 
-      <div className="mb-4 flex h-2 overflow-hidden rounded-full bg-white/10">
-        <div className="h-full bg-brand-secondary" style={{ width: `${displayYesPercent}%` }} />
-        <div className="h-full bg-downvote" style={{ width: `${noPercent}%` }} />
-      </div>
+            return (
+              <div className="rounded-[8px] border border-white/10 bg-black/25 p-3" key={option.id}>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <span className="font-black text-white">{option.label}</span>
+                  <span className="font-mono text-[11px] text-[var(--muted)]">
+                    {optionVotes.toLocaleString()} calls
+                  </span>
+                </div>
+                <div className="mb-2 flex h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full bg-brand-secondary" style={{ width: `${optionUpPercent}%` }} />
+                  <div className="h-full bg-downvote" style={{ width: `${100 - optionUpPercent}%` }} />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    className="h-8 rounded-[6px] border border-brand-secondary/35 bg-brand-secondary/10 text-xs font-black text-brand-secondary transition-colors hover:bg-brand-secondary hover:text-black disabled:cursor-not-allowed disabled:opacity-45"
+                    disabled={voteDisabled}
+                    onClick={() => onOptionVote?.(option.id, "UP")}
+                    type="button"
+                  >
+                    Upvote {option.upVotes}
+                  </button>
+                  <button
+                    className="h-8 rounded-[6px] border border-downvote/35 bg-downvote/10 text-xs font-black text-downvote transition-colors hover:bg-downvote hover:text-black disabled:cursor-not-allowed disabled:opacity-45"
+                    disabled={voteDisabled}
+                    onClick={() => onOptionVote?.(option.id, "DOWN")}
+                    type="button"
+                  >
+                    Downvote {option.downVotes}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <>
+          <div className="mb-2 flex items-end justify-between">
+            <div>
+              <span className="text-[32px] font-black leading-none text-brand-secondary">
+                {displayYesPercent.toFixed(0)}%
+              </span>
+              <span className="ml-2 font-mono text-sm font-black text-brand-secondary">Yes</span>
+            </div>
+            <div>
+              <span className="text-[32px] font-black leading-none text-white/90">{noPercent.toFixed(0)}%</span>
+              <span className="ml-2 font-mono text-sm font-black text-[var(--muted)]">No</span>
+            </div>
+          </div>
+
+          <div className="mb-4 flex h-2 overflow-hidden rounded-full bg-white/10">
+            <div className="h-full bg-brand-secondary" style={{ width: `${displayYesPercent}%` }} />
+            <div className="h-full bg-downvote" style={{ width: `${noPercent}%` }} />
+          </div>
+        </>
+      )}
 
       <div className="mb-4 grid grid-cols-[1fr_1fr_auto] items-center gap-3 border-b border-white/10 pb-4 font-mono text-[11px] text-[var(--muted)]">
         <span>Calls {totalVotes.toLocaleString()}</span>
@@ -235,7 +286,7 @@ export default function MarketCard({
         </div>
       )}
 
-      {canFreeVote && (
+      {canFreeVote && !isMultiOption && (
         <div className="mb-4 grid grid-cols-2 gap-2" onClick={stopClick}>
           <button
             className="h-9 rounded-[6px] border border-brand-secondary/35 bg-brand-secondary/10 text-sm font-black text-brand-secondary transition-colors hover:bg-brand-secondary hover:text-black disabled:cursor-not-allowed disabled:opacity-45"

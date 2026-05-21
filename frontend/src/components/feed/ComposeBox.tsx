@@ -19,7 +19,8 @@ interface ComposeBoxProps {
 }
 
 const PREDICTION_CATEGORIES = [
-  "Match Winner",
+  "World Cup",
+  "Match Result",
   "Goals",
   "Player Performance",
   "Group Stage",
@@ -29,6 +30,8 @@ const PREDICTION_CATEGORIES = [
   "Fan Sentiment",
 ];
 
+const FIFA_WORLD_CUP_RESOLUTION_SOURCE = "https://www.fifa.com/en/tournaments/mens/worldcup";
+
 export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
   const { createPredictionOnChain } = useUsdcTransfer();
   const [content, setContent] = useState("");
@@ -36,12 +39,16 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
   const [market, setMarket] = useState<MarketInput>({
     content: "",
     question: "",
-    category: "Match Winner",
+    category: "World Cup",
+    kind: "multi_option",
+    options: [],
     deadline: "",
-    resolutionSource: "",
-    yesCondition: "",
-    noCondition: "",
+    resolutionSource: FIFA_WORLD_CUP_RESOLUTION_SOURCE,
+    yesCondition: "Official FIFA result selects the winning match outcome.",
+    noCondition: "All non-winning match outcomes resolve as not selected.",
   });
+  const [homeOutcome, setHomeOutcome] = useState("USA");
+  const [awayOutcome, setAwayOutcome] = useState("PAR");
   const [agentReview, setAgentReview] = useState<CredPlayReview | null>(null);
   const [reviewedSignature, setReviewedSignature] = useState("");
   const [saving, setSaving] = useState(false);
@@ -52,10 +59,26 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
       market.question.trim().length > 0 &&
       market.category.trim().length > 0 &&
       market.deadline.trim().length > 0 &&
-      market.resolutionSource.trim().length > 0 &&
-      market.yesCondition.trim().length > 0 &&
-      market.noCondition.trim().length > 0,
-    [market],
+      homeOutcome.trim().length > 0 &&
+      awayOutcome.trim().length > 0,
+    [homeOutcome, awayOutcome, market],
+  );
+
+  const matchOptions = useMemo(
+    () => [{ label: homeOutcome.trim() }, { label: "Draw" }, { label: awayOutcome.trim() }],
+    [awayOutcome, homeOutcome],
+  );
+
+  const generatedMarket = useMemo<MarketInput>(
+    () => ({
+      ...market,
+      kind: "multi_option",
+      options: matchOptions,
+      resolutionSource: FIFA_WORLD_CUP_RESOLUTION_SOURCE,
+      yesCondition: `Official FIFA result selects one outcome: ${homeOutcome.trim()}, Draw, or ${awayOutcome.trim()}.`,
+      noCondition: "All other outcomes resolve as down for this match-result market.",
+    }),
+    [awayOutcome, homeOutcome, market, matchOptions],
   );
 
   const marketSignature = useMemo(
@@ -63,22 +86,24 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
       JSON.stringify({
         content: content.trim(),
         question: market.question.trim(),
-        category: market.category.trim(),
+        category: generatedMarket.category.trim(),
+        kind: generatedMarket.kind,
+        options: generatedMarket.options,
         deadline: market.deadline,
-        resolutionSource: market.resolutionSource.trim(),
-        yesCondition: market.yesCondition.trim(),
-        noCondition: market.noCondition.trim(),
+        resolutionSource: generatedMarket.resolutionSource.trim(),
+        yesCondition: generatedMarket.yesCondition.trim(),
+        noCondition: generatedMarket.noCondition.trim(),
       }),
-    [content, market],
+    [content, generatedMarket, market.deadline, market.question],
   );
 
   const liveAgentReview = useMemo(
     () =>
       reviewPredictionPost({
-        ...market,
+        ...generatedMarket,
         content,
       }),
-    [content, market],
+    [content, generatedMarket],
   );
 
   const reviewIsCurrent = Boolean(agentReview && reviewedSignature === marketSignature);
@@ -126,7 +151,7 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
         const marketKey = createMarketKey();
         const payment = await createPredictionOnChain(PREDICTION_CREATION_FEE_USDT, marketKey);
         const result = await createMarketPost(profile.id, {
-          ...market,
+          ...generatedMarket,
           content,
           creationFeeTxHash: payment.hash,
           feeCollectorAddress: payment.contractAddress,
@@ -136,12 +161,16 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
         setMarket({
           content: "",
           question: "",
-          category: "Match Winner",
+          category: "World Cup",
+          kind: "multi_option",
+          options: [],
           deadline: "",
-          resolutionSource: "",
-          yesCondition: "",
-          noCondition: "",
+          resolutionSource: FIFA_WORLD_CUP_RESOLUTION_SOURCE,
+          yesCondition: "Official FIFA result selects the winning match outcome.",
+          noCondition: "All non-winning match outcomes resolve as not selected.",
         });
+        setHomeOutcome("USA");
+        setAwayOutcome("PAR");
         setAgentReview(null);
         setReviewedSignature("");
         setIsMarket(false);
@@ -187,6 +216,27 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
               value={market.question}
             />
             <div className="grid gap-2 sm:grid-cols-2">
+              <input
+                className="h-10 rounded-[8px] border border-white/10 bg-black/35 px-3 text-sm text-white outline-none placeholder:text-[var(--muted)] focus:border-brand-secondary/50"
+                onChange={(event) => setHomeOutcome(event.target.value)}
+                placeholder="Home option (e.g. USA)"
+                value={homeOutcome}
+              />
+              <input
+                className="h-10 rounded-[8px] border border-white/10 bg-black/35 px-3 text-sm text-white outline-none placeholder:text-[var(--muted)] focus:border-brand-secondary/50"
+                onChange={(event) => setAwayOutcome(event.target.value)}
+                placeholder="Away option (e.g. PAR)"
+                value={awayOutcome}
+              />
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {matchOptions.map((option, index) => (
+                <div className="rounded-[8px] border border-brand-secondary/20 bg-brand-secondary/10 px-3 py-2 text-center text-sm font-black text-white" key={`${option.label}-${index}`}>
+                  {option.label || "Option"}
+                </div>
+              ))}
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
               <select
                 className="h-10 rounded-[8px] border border-white/10 bg-black/35 px-3 text-sm text-white outline-none focus:border-brand-secondary/50"
                 onChange={(event) => setMarket((current) => ({ ...current, category: event.target.value }))}
@@ -204,25 +254,10 @@ export default function ComposeBox({ profile, onCreated }: ComposeBoxProps) {
               />
             </div>
             <input
-              className="h-10 rounded-[8px] border border-white/10 bg-black/35 px-3 text-sm text-white outline-none placeholder:text-[var(--muted)] focus:border-brand-secondary/50"
-              onChange={(event) => setMarket((current) => ({ ...current, resolutionSource: event.target.value }))}
-              placeholder="Resolution source (e.g. FIFA official results)"
-              value={market.resolutionSource}
+              className="h-10 rounded-[8px] border border-white/10 bg-black/35 px-3 text-sm text-[var(--muted)] outline-none"
+              readOnly
+              value={`Resolution source: ${FIFA_WORLD_CUP_RESOLUTION_SOURCE}`}
             />
-            <div className="grid gap-2 sm:grid-cols-2">
-              <input
-                className="h-10 rounded-[8px] border border-brand-secondary/40 bg-black/35 px-3 text-sm text-white outline-none placeholder:text-[var(--muted)]"
-                onChange={(event) => setMarket((current) => ({ ...current, yesCondition: event.target.value }))}
-                placeholder="YES condition"
-                value={market.yesCondition}
-              />
-              <input
-                className="h-10 rounded-[8px] border border-downvote/40 bg-black/35 px-3 text-sm text-white outline-none placeholder:text-[var(--muted)]"
-                onChange={(event) => setMarket((current) => ({ ...current, noCondition: event.target.value }))}
-                placeholder="NO condition"
-                value={market.noCondition}
-              />
-            </div>
             <div className="rounded-[8px] border border-white/10 bg-black/30 p-3">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <span className="font-mono text-[11px] font-black uppercase tracking-[0.12em] text-[var(--foreground)]">

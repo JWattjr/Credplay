@@ -46,7 +46,7 @@ export class MarketsController {
     @Body() dto: CastFreeVoteDto,
   ) {
     const authorId = dto.userId || dto.profileId;
-    return this.marketsService.castFreeVote(marketId, authorId!, dto.side);
+    return this.marketsService.castFreeVote(marketId, authorId!, dto.side, dto.optionId);
   }
 
   @Post(":marketId/free-vote")
@@ -56,7 +56,7 @@ export class MarketsController {
     @Body() dto: CastFreeVoteDto,
   ) {
     const authorId = dto.userId || dto.profileId;
-    return this.marketsService.castFreeVote(marketId, authorId!, dto.side);
+    return this.marketsService.castFreeVote(marketId, authorId!, dto.side, dto.optionId);
   }
 
   @Post(":marketId/approve-trading")

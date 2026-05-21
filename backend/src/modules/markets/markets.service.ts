@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, NotImplementedException, Inject, forwardRef, UnprocessableEntityException } from "@nestjs/common";
+import { Injectable, NotFoundException, ConflictException, NotImplementedException, Inject, forwardRef, UnprocessableEntityException, OnModuleInit } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types, SortOrder } from "mongoose";
 import {
@@ -61,7 +61,7 @@ export interface MarketTradeResponse {
 }
 
 @Injectable()
-export class MarketsService {
+export class MarketsService implements OnModuleInit {
   constructor(
     @InjectModel(Market.name) private marketModel: Model<MarketDocument>,
     @InjectModel(Vote.name) private voteModel: Model<VoteDocument>,
@@ -74,6 +74,10 @@ export class MarketsService {
     private readonly postsService: PostsService,
     private readonly xLayerVerification: XLayerVerificationService,
   ) {}
+
+  async onModuleInit() {
+    await this.voteModel.syncIndexes();
+  }
 
   private todayKey(date = new Date()): string {
     return date.toISOString().slice(0, 10);
@@ -171,7 +175,14 @@ export class MarketsService {
     );
   }
 
-  async castFreeVote(marketId: string, userId: string, side: VoteSide): Promise<VoteResponse> {
+  private nextReviewStatus(market: Pick<MarketDocument, "status" | "totalFreeVotes" | "qualificationThreshold" | "liquidity" | "minimumSeedLiquidity">) {
+    if (market.status === "qualified" || market.status === "tradable") return market.status;
+    return market.totalFreeVotes >= market.qualificationThreshold && market.liquidity >= market.minimumSeedLiquidity
+      ? "qualified"
+      : market.status;
+  }
+
+  async castFreeVote(marketId: string, userId: string, side: VoteSide, optionId?: string): Promise<VoteResponse> {
     const [market, userExists] = await Promise.all([
       this.marketModel.findById(marketId),
       this.userModel.exists({ _id: userId }),
@@ -187,13 +198,30 @@ export class MarketsService {
       throw new ConflictException("This market is not open for free voting.");
     }
 
+    const isMultiOption = market.kind === "multi_option";
+    const normalizedOptionId = optionId?.trim() || null;
+
+    if (isMultiOption) {
+      if (side !== "UP" && side !== "DOWN") {
+        throw new ConflictException("Match outcome markets require UP or DOWN votes.");
+      }
+      if (!normalizedOptionId || !market.options.some((option) => option.id === normalizedOptionId)) {
+        throw new UnprocessableEntityException("Choose a valid market outcome before voting.");
+      }
+    } else if (side !== "YES" && side !== "NO") {
+      throw new ConflictException("Binary markets require YES or NO calls.");
+    }
+
     const existingVote = await this.voteModel.exists({
       marketId: new Types.ObjectId(marketId),
       userId: new Types.ObjectId(userId),
       voteType: "free",
+      optionId: isMultiOption ? normalizedOptionId : null,
     });
     if (existingVote) {
-      throw new ConflictException("You have already voted on this market.");
+      throw new ConflictException(
+        isMultiOption ? "You have already voted on this outcome." : "You have already voted on this market.",
+      );
     }
 
     const usageDate = this.todayKey();
@@ -204,25 +232,43 @@ export class MarketsService {
         userId: new Types.ObjectId(userId),
         side,
         voteType: "free",
+        optionId: isMultiOption ? normalizedOptionId : null,
       });
     } catch (error) {
       await this.releaseDailyVote(userId, usageDate);
       if (this.isDuplicateKeyError(error)) {
-        throw new ConflictException("You have already voted on this market.");
+        throw new ConflictException(
+          isMultiOption ? "You have already voted on this outcome." : "You have already voted on this market.",
+        );
       }
       throw error;
     }
 
-    const [freeYesVotes, freeNoVotes, uniqueVotersCount] = await Promise.all([
-      this.voteModel.countDocuments({ marketId: new Types.ObjectId(marketId), voteType: "free", side: "YES" }),
-      this.voteModel.countDocuments({ marketId: new Types.ObjectId(marketId), voteType: "free", side: "NO" }),
+    const [votes, uniqueVotersCount] = await Promise.all([
+      this.voteModel.find({ marketId: new Types.ObjectId(marketId), voteType: "free" }).select("side optionId"),
       this.voteModel.distinct("userId", { marketId: new Types.ObjectId(marketId), voteType: "free" }).then((ids) => ids.length),
     ]);
+
+    const freeYesVotes = votes.filter((vote) => vote.side === "YES" || vote.side === "UP").length;
+    const freeNoVotes = votes.filter((vote) => vote.side === "NO" || vote.side === "DOWN").length;
     const totalFreeVotes = freeYesVotes + freeNoVotes;
-    const nextStatus =
-      totalFreeVotes >= market.qualificationThreshold && uniqueVotersCount >= market.uniqueVoterThreshold
-        ? "qualified"
-        : market.status;
+    const updatedOptions = isMultiOption
+      ? market.options.map((option) => ({
+          id: option.id,
+          label: option.label,
+          seedAmount: option.seedAmount || 0,
+          upVotes: votes.filter((vote) => vote.optionId === option.id && vote.side === "UP").length,
+          downVotes: votes.filter((vote) => vote.optionId === option.id && vote.side === "DOWN").length,
+        }))
+      : market.options;
+
+    const nextStatus = this.nextReviewStatus({
+      status: market.status,
+      totalFreeVotes,
+      qualificationThreshold: market.qualificationThreshold,
+      liquidity: market.liquidity,
+      minimumSeedLiquidity: market.minimumSeedLiquidity,
+    } as MarketDocument);
 
     const updatedMarket = await this.marketModel.findByIdAndUpdate(
       marketId,
@@ -231,6 +277,7 @@ export class MarketsService {
         freeNoVotes,
         totalFreeVotes,
         uniqueVotersCount,
+        options: updatedOptions,
         status: nextStatus,
       },
       { new: true, runValidators: true },
@@ -382,10 +429,16 @@ export class MarketsService {
         ? { $inc: { usdcYesAmount: amount, liquidity: amount } }
         : { $inc: { usdcNoAmount: amount, liquidity: amount } };
 
-    const updatedMarket = await this.marketModel.findByIdAndUpdate(input.marketId, update, {
+    const seededMarket = await this.marketModel.findByIdAndUpdate(input.marketId, update, {
       new: true,
       runValidators: true,
     });
+
+    const nextStatus = this.nextReviewStatus(seededMarket!);
+    const updatedMarket =
+      nextStatus !== seededMarket!.status
+        ? await this.marketModel.findByIdAndUpdate(input.marketId, { status: nextStatus }, { new: true, runValidators: true })
+        : seededMarket;
 
     await this.marketTradeModel.create({
       marketId: new Types.ObjectId(input.marketId),

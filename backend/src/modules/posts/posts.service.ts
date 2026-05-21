@@ -3,7 +3,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
 import { Post, PostDocument } from "./posts.model";
 import { User, UserDocument } from "../users/users.model";
-import { Market, MarketDocument, Vote, VoteDocument, VoteSide } from "../markets/markets.model";
+import { Market, MarketDocument, MarketKind, MarketOption, Vote, VoteDocument, VoteSide } from "../markets/markets.model";
 import { Like, LikeDocument, Reshare, ReshareDocument } from "../interactions/interactions.model";
 import { Comment, CommentDocument } from "../comments/comments.model";
 import { serializeUser, UserResponse } from "../auth/auth.service";
@@ -25,6 +25,8 @@ export interface MarketResponse {
   yes_condition: string;
   noCondition: string;
   no_condition: string;
+  kind: MarketKind;
+  options: MarketOption[];
   status: string;
   freeYesVotes: number;
   free_yes_votes: number;
@@ -34,6 +36,7 @@ export interface MarketResponse {
   uniqueVotersCount: number;
   qualificationThreshold: number;
   uniqueVoterThreshold: number;
+  minimumSeedLiquidity: number;
   marketCreationFeeUsdc: number;
   market_creation_fee_usdc: number;
   creationFeeTxHash: string | null;
@@ -77,6 +80,7 @@ export interface FeedPostResponse {
 }
 
 const VAGUE_WORDS = ["popular", "successful", "viral", "big", "famous", "good", "better", "important"];
+const FIFA_WORLD_CUP_RESOLUTION_SOURCE = "https://www.fifa.com/en/tournaments/mens/worldcup";
 export const MARKET_OUTCOME_WARNING =
   "Market posts need measurable outcomes. Define this with a number, deadline, and resolution source.";
 
@@ -96,6 +100,65 @@ export class PostsService {
   getMarketWarning(question: string): string | null {
     const normalized = question.toLowerCase();
     return VAGUE_WORDS.some((word) => normalized.includes(word)) ? MARKET_OUTCOME_WARNING : null;
+  }
+
+  private slugOption(label: string, index: number): string {
+    const slug = label
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    return slug || `option-${index + 1}`;
+  }
+
+  private normalizeMarketOptions(input: CreateMarketPostDto): MarketOption[] {
+    const kind = input.kind || "binary";
+    if (kind !== "multi_option") return [];
+
+    const labels = (input.options || [])
+      .map((option) => option.label.trim())
+      .filter(Boolean);
+    const uniqueLabels = Array.from(new Set(labels));
+
+    if (uniqueLabels.length < 2) {
+      throw new UnprocessableEntityException("Match markets need at least two selectable outcomes.");
+    }
+    if (uniqueLabels.length > 8) {
+      throw new UnprocessableEntityException("Custom match markets can include up to 8 outcomes.");
+    }
+
+    return uniqueLabels.map((label, index) => ({
+      id: this.slugOption(label, index),
+      label,
+      upVotes: 0,
+      downVotes: 0,
+      seedAmount: 0,
+    }));
+  }
+
+  private resolveResolutionSource(input: CreateMarketPostDto): string {
+    const isWorldCupMarket = input.category.toLowerCase().includes("world cup") || input.kind === "multi_option";
+    if (isWorldCupMarket) return FIFA_WORLD_CUP_RESOLUTION_SOURCE;
+    return input.resolutionSource?.trim() || "";
+  }
+
+  private resolveConditions(input: CreateMarketPostDto, options: MarketOption[]) {
+    if ((input.kind || "binary") === "multi_option") {
+      const labels = options.map((option) => option.label).join(", ");
+      return {
+        yesCondition: `The winning outcome resolves to the official FIFA result among: ${labels}.`,
+        noCondition: "All non-winning outcomes resolve as not selected by the official FIFA result.",
+      };
+    }
+
+    if (!input.yesCondition?.trim() || !input.noCondition?.trim()) {
+      throw new UnprocessableEntityException("Binary markets require YES and NO resolution conditions.");
+    }
+
+    return {
+      yesCondition: input.yesCondition.trim(),
+      noCondition: input.noCondition.trim(),
+    };
   }
 
   serializeMarket(market: MarketDocument): MarketResponse {
@@ -120,6 +183,14 @@ export class PostsService {
       yes_condition: market.yesCondition,
       noCondition: market.noCondition,
       no_condition: market.noCondition,
+      kind: market.kind || "binary",
+      options: (market.options || []).map((option) => ({
+        id: option.id,
+        label: option.label,
+        upVotes: option.upVotes || 0,
+        downVotes: option.downVotes || 0,
+        seedAmount: option.seedAmount || 0,
+      })),
       status: market.status,
       freeYesVotes: market.freeYesVotes,
       free_yes_votes: market.freeYesVotes,
@@ -129,6 +200,7 @@ export class PostsService {
       uniqueVotersCount: market.uniqueVotersCount,
       qualificationThreshold: market.qualificationThreshold,
       uniqueVoterThreshold: market.uniqueVoterThreshold,
+      minimumSeedLiquidity: market.minimumSeedLiquidity,
       marketCreationFeeUsdc: market.marketCreationFeeUsdc,
       market_creation_fee_usdc: market.marketCreationFeeUsdc,
       creationFeeTxHash: market.creationFeeTxHash,
@@ -299,6 +371,15 @@ export class PostsService {
       throw new ConflictException("This X Layer prediction transaction has already been recorded.");
     }
 
+    const kind = input.kind || "binary";
+    const options = this.normalizeMarketOptions(input);
+    const resolutionSource = this.resolveResolutionSource(input);
+    const { yesCondition, noCondition } = this.resolveConditions(input, options);
+
+    if (!resolutionSource) {
+      throw new UnprocessableEntityException("Markets require a resolution source.");
+    }
+
     const post = await this.postModel.create({
       authorId: new Types.ObjectId(profileId),
       type: "market",
@@ -311,9 +392,11 @@ export class PostsService {
       question: input.question.trim(),
       category: input.category.trim(),
       deadline: new Date(input.deadline),
-      resolutionSource: input.resolutionSource.trim(),
-      yesCondition: input.yesCondition.trim(),
-      noCondition: input.noCondition.trim(),
+      resolutionSource,
+      yesCondition,
+      noCondition,
+      kind,
+      options,
       marketCreationFeeUsdc: this.xLayerVerification.formatUnits(verified.feeAmount),
       creationFeeTxHash: input.creationFeeTxHash.trim(),
       feeCollectorAddress: input.feeCollectorAddress.trim() || verified.contractAddress,

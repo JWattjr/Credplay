@@ -68,10 +68,10 @@ export function fetchMarketTrades(marketId: string) {
   return apiRequest<MarketTrade[]>(`/markets/${marketId}/trades`);
 }
 
-export async function castFreeVote(market: MarketPost, profileId: string, side: VoteSide) {
+export async function castFreeVote(market: MarketPost, profileId: string, side: VoteSide, optionId?: string) {
   return apiRequest<{ market: MarketPost; dailyVotes: { votesLimit: number; votesUsed: number; votesRemaining: number; date: string } }>(`/markets/${market.id}/vote`, {
     method: "POST",
-    body: JSON.stringify({ userId: profileId, side }),
+    body: JSON.stringify({ userId: profileId, side, optionId }),
   });
 }
 

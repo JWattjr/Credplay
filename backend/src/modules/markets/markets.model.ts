@@ -1,9 +1,10 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Schema as MongooseSchema, Types } from "mongoose";
 
-export type VoteSide = "YES" | "NO";
+export type VoteSide = "YES" | "NO" | "UP" | "DOWN";
 export type VoteType = "free" | "usdc";
 export type MarketTradeAction = "BUY" | "SELL";
+export type MarketKind = "binary" | "multi_option";
 export type MarketStatus =
   | "draft"
   | "open_for_votes"
@@ -19,6 +20,14 @@ export type VoteDocument = HydratedDocument<Vote>;
 export type DailyVoteUsageDocument = HydratedDocument<DailyVoteUsage>;
 export type MarketPositionDocument = HydratedDocument<MarketPosition>;
 export type MarketTradeDocument = HydratedDocument<MarketTrade>;
+
+export interface MarketOption {
+  id: string;
+  label: string;
+  upVotes: number;
+  downVotes: number;
+  seedAmount: number;
+}
 
 @Schema({ timestamps: true, versionKey: false })
 export class Market {
@@ -46,6 +55,23 @@ export class Market {
   @Prop({ type: String, required: true, trim: true })
   noCondition: string;
 
+  @Prop({ type: String, enum: ["binary", "multi_option"], default: "binary", index: true })
+  kind: MarketKind;
+
+  @Prop({
+    type: [
+      {
+        id: { type: String, required: true, trim: true },
+        label: { type: String, required: true, trim: true },
+        upVotes: { type: Number, default: 0 },
+        downVotes: { type: Number, default: 0 },
+        seedAmount: { type: Number, default: 0 },
+      },
+    ],
+    default: [],
+  })
+  options: MarketOption[];
+
   @Prop({
     type: String,
     enum: ["draft", "open_for_votes", "qualified", "tradable", "closed", "resolving", "resolved", "voided"],
@@ -71,6 +97,9 @@ export class Market {
 
   @Prop({ type: Number, default: 30 })
   uniqueVoterThreshold: number;
+
+  @Prop({ type: Number, default: 50 })
+  minimumSeedLiquidity: number;
 
   @Prop({ type: Number, default: 1 })
   marketCreationFeeUsdc: number;
@@ -122,8 +151,11 @@ export class Vote {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true, index: true })
   userId: Types.ObjectId;
 
-  @Prop({ type: String, enum: ["YES", "NO"], required: true })
+  @Prop({ type: String, enum: ["YES", "NO", "UP", "DOWN"], required: true })
   side: VoteSide;
+
+  @Prop({ type: String, default: null, trim: true })
+  optionId: string | null;
 
   @Prop({ type: String, enum: ["free", "usdc"], default: "free" })
   voteType: VoteType;
@@ -134,7 +166,7 @@ export class Vote {
 
 export const VoteSchema = SchemaFactory.createForClass(Vote);
 
-VoteSchema.index({ marketId: 1, userId: 1, voteType: 1 }, { unique: true });
+VoteSchema.index({ marketId: 1, userId: 1, voteType: 1, optionId: 1 }, { unique: true });
 
 @Schema({ timestamps: true, versionKey: false })
 export class DailyVoteUsage {

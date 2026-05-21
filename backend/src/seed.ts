@@ -50,6 +50,8 @@ async function createMarketPost(input: {
   content: string;
   question: string;
   category: string;
+  kind?: "binary" | "multi_option";
+  options?: { id: string; label: string; upVotes: number; downVotes: number; seedAmount: number }[];
   status?: "open_for_votes" | "qualified";
 }) {
   const post = await PostModel.create({
@@ -67,32 +69,44 @@ async function createMarketPost(input: {
     resolutionSource: "Official public result or primary source report",
     yesCondition: "YES resolves if the stated measurable threshold is reached by the deadline.",
     noCondition: "NO resolves if the stated measurable threshold is not reached by the deadline.",
+    kind: input.kind || "binary",
+    options: input.options || [],
     status: input.status || "open_for_votes",
   });
 
   return { post, market };
 }
 
-async function addVote(marketId: string, userId: string, side: string) {
+async function addVote(marketId: string, userId: string, side: string, optionId: string | null = null) {
   await VoteModel.create({
     marketId: new mongoose.Types.ObjectId(marketId),
     userId: new mongoose.Types.ObjectId(userId),
     side,
+    optionId,
     voteType: "free",
   });
 }
 
 async function syncMarketCounters(marketId: string) {
-  const [freeYesVotes, freeNoVotes, uniqueVotersCount] = await Promise.all([
-    VoteModel.countDocuments({ marketId: new mongoose.Types.ObjectId(marketId), voteType: "free", side: "YES" }),
-    VoteModel.countDocuments({ marketId: new mongoose.Types.ObjectId(marketId), voteType: "free", side: "NO" }),
+  const marketObjectId = new mongoose.Types.ObjectId(marketId);
+  const [votes, uniqueVotersCount] = await Promise.all([
+    VoteModel.find({ marketId: marketObjectId, voteType: "free" }).select("side optionId"),
     VoteModel.distinct("userId", { marketId: new mongoose.Types.ObjectId(marketId), voteType: "free" }).then((ids) => ids.length),
   ]);
+  const freeYesVotes = votes.filter((vote) => vote.side === "YES" || vote.side === "UP").length;
+  const freeNoVotes = votes.filter((vote) => vote.side === "NO" || vote.side === "DOWN").length;
   const totalFreeVotes = freeYesVotes + freeNoVotes;
   const market = await MarketModel.findById(marketId);
+  const options = (market?.options || []).map((option: any) => ({
+    id: option.id,
+    label: option.label,
+    seedAmount: option.seedAmount || 0,
+    upVotes: votes.filter((vote) => vote.optionId === option.id && vote.side === "UP").length,
+    downVotes: votes.filter((vote) => vote.optionId === option.id && vote.side === "DOWN").length,
+  }));
   const qualified =
     totalFreeVotes >= (market?.qualificationThreshold || 50) &&
-    uniqueVotersCount >= (market?.uniqueVoterThreshold || 30);
+    (market?.liquidity || 0) >= (market?.minimumSeedLiquidity || 50);
 
   await MarketModel.updateOne(
     { _id: marketId },
@@ -101,6 +115,7 @@ async function syncMarketCounters(marketId: string) {
       freeNoVotes,
       totalFreeVotes,
       uniqueVotersCount,
+      options,
       status: qualified ? "qualified" : market?.status || "open_for_votes",
     },
   );
@@ -155,6 +170,12 @@ async function seed() {
     content: "Will Argentina beat Mexico in their World Cup opener?",
     question: "Will Argentina beat Mexico in their World Cup opener?",
     category: "World Cup",
+    kind: "multi_option",
+    options: [
+      { id: "argentina", label: "Argentina", upVotes: 0, downVotes: 0, seedAmount: 0 },
+      { id: "draw", label: "Draw", upVotes: 0, downVotes: 0, seedAmount: 0 },
+      { id: "mexico", label: "Mexico", upVotes: 0, downVotes: 0, seedAmount: 0 },
+    ],
   });
   const qualifiedMarket = await createMarketPost({
     authorId: jude.id,
@@ -183,7 +204,8 @@ async function seed() {
   await PostModel.updateOne({ _id: closeMarket.post._id }, { resharesCount: 1 });
 
   for (let index = 0; index < 49; index += 1) {
-    await addVote(closeMarket.market.id, generatedVoters[index].id, index % 3 === 0 ? "NO" : "YES");
+    const optionId = ["argentina", "draw", "mexico"][index % 3];
+    await addVote(closeMarket.market.id, generatedVoters[index].id, index % 4 === 0 ? "DOWN" : "UP", optionId);
   }
   for (let index = 0; index < 50; index += 1) {
     await addVote(qualifiedMarket.market.id, generatedVoters[index].id, index % 4 === 0 ? "NO" : "YES");
